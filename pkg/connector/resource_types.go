@@ -10,3 +10,15 @@ var userResourceType = &v2.ResourceType{
 	DisplayName: "User",
 	Traits:      []v2.ResourceType_Trait{v2.ResourceType_TRAIT_USER},
 }
+
+var groupResourceType = &v2.ResourceType{
+	Id:          "group",
+	DisplayName: "Group",
+	Traits:      []v2.ResourceType_Trait{v2.ResourceType_TRAIT_GROUP},
+}
+
+var roleResourceType = &v2.ResourceType{
+	Id:          "role",
+	DisplayName: "Role",
+	Traits:      []v2.ResourceType_Trait{v2.ResourceType_TRAIT_ROLE},
+}
