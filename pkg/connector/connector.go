@@ -19,6 +19,7 @@ type Connector struct {
 func (c *Connector) ResourceSyncers(ctx context.Context) []connectorbuilder.ResourceSyncer {
 	return []connectorbuilder.ResourceSyncer{
 		newUserBuilder(c.client),
+		newRoleBuilder(c.client),
 	}
 }
 
@@ -45,7 +46,11 @@ func (c *Connector) Validate(ctx context.Context) (annotations.Annotations, erro
 // New returns a new instance of the connector.
 func New(ctx context.Context, appKey, appSecret, refreshToken string) (*Connector, error) {
 
-	client := &dropbox.Client{}
+	client, err := dropbox.NewClient(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error creating dropbox client: %w", err)
+	}
+
 	accessToken, _, err := client.RequestAccessToken(ctx, appKey, appSecret, refreshToken)
 	if err != nil {
 		return nil, fmt.Errorf("error getting access token: %w", err)

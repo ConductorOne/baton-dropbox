@@ -1,38 +1,76 @@
 package dropbox
 
-// ListUsersPayload represents the top-level JSON structure.
+// Users
+
 type ListUsersPayload struct {
-	Cursor  string   `json:"cursor"`
-	HasMore bool     `json:"has_more"`
-	Members []Member `json:"members"`
+	Cursor  string           `json:"cursor"`
+	HasMore bool             `json:"has_more"`
+	Members []ListUserMember `json:"members"`
 }
 
-// Member represents an individual member in the "members" array.
-type Member struct {
+type ListUserMember struct {
 	Profile User   `json:"profile"`
 	Roles   []Role `json:"roles"`
 }
 
-// User represents the basic personal information and groups of a member.
 type User struct {
 	AccountID string   `json:"account_id"`
 	Name      Name     `json:"name"`
 	Email     string   `json:"email"`
 	Groups    []string `json:"groups"`
-	// MembershipType string   `json:"membership_type,omitempty"` // .tag value as string
-	// Status         string   `json:"status,omitempty"`          // .tag value as string
 }
 
-// Name represents the "name" object in the profile.
+func (u ListUserMember) HasRole(roleID string) bool {
+	for _, role := range u.Roles {
+		if role.RoleID == roleID {
+			return true
+		}
+	}
+	return false
+}
+
 type Name struct {
 	DisplayName string `json:"display_name"`
 	GivenName   string `json:"given_name"`
 	Surname     string `json:"surname"`
 }
 
-// Role represents the roles assigned to a member.
+// Roles
+
 type Role struct {
 	Description string `json:"description"`
 	Name        string `json:"name"`
 	RoleID      string `json:"role_id"`
+}
+
+// Groups
+
+type ListGroupsPayload struct {
+	Cursor  string  `json:"cursor"`
+	HasMore bool    `json:"has_more"`
+	Groups  []Group `json:"groups"`
+}
+
+type Group struct {
+	GroupID             string              `json:"group_id"`
+	Name                string              `json:"group_name"`
+	GroupManagementType GroupManagementType `json:"group_management_type"`
+	MemberCount         int                 `json:"member_count"`
+}
+
+type GroupManagementType struct {
+	Tag string `json:".tag"`
+}
+
+type ListGroupMembersPayload struct {
+	Cursor  string            `json:"cursor"`
+	HasMore bool              `json:"has_more"`
+	Members []ListGroupMember `json:"members"`
+}
+
+type ListGroupMember struct {
+	Profile User `json:"profile"`
+
+	// owner or member of the group
+	AccessType string `json:"access_type"`
 }

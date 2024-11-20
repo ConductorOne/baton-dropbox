@@ -5,41 +5,34 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+
+	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
+	"github.com/conductorone/baton-sdk/pkg/uhttp"
 )
 
-type ListUserArgs struct {
+const defaultListUserLimit = 100
+
+type ListUserBody struct {
 	Limit          int  `json:"limit"`
 	IncludeRemoved bool `json:"include_removed"`
 }
 
-func DefaultListUserBody() ListUserArgs {
-	return ListUserArgs{
-		Limit:          100,
+func DefaultListUserBody() ListUserBody {
+	return ListUserBody{
+		Limit:          defaultListUserLimit,
 		IncludeRemoved: false,
 	}
-
 }
 
-type ListUserOption func(*ListUserArgs)
-
-func WithLimit(limit int) ListUserOption {
-	return func(args *ListUserArgs) {
-		args.Limit = limit
-	}
-}
-
-func WithIncludeRemoved() ListUserOption {
-	return func(args *ListUserArgs) {
-		args.IncludeRemoved = true
-	}
-}
-
-func (c *Client) ListUsers(ctx context.Context, opts ...ListUserOption) (*ListUsersPayload, error) {
-	// l := ctxzap.Extract(ctx)
-
+// TODO: https://www.dropbox.com/developers/documentation/http/teams#team-members-list-continue
+func (c *Client) ListUsers(ctx context.Context, limit int, includeRemoved bool) (*ListUsersPayload, error) {
 	body := DefaultListUserBody()
-	for _, opt := range opts {
-		opt(&body)
+	if limit != 0 {
+		body.Limit = limit
+	}
+
+	if includeRemoved {
+		body.IncludeRemoved = true
 	}
 
 	reader := new(bytes.Buffer)
@@ -51,7 +44,12 @@ func (c *Client) ListUsers(ctx context.Context, opts ...ListUserOption) (*ListUs
 	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
 	req.Header.Set("Content-Type", "application/json")
 
-	res, err := c.Do(req)
+	var target ListUsersPayload
+	var ratelimitData v2.RateLimitDescription
+	res, err := c.Do(req,
+		uhttp.WithJSONResponse(&target),
+		uhttp.WithRatelimitData(&ratelimitData),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -61,11 +59,6 @@ func (c *Client) ListUsers(ctx context.Context, opts ...ListUserOption) (*ListUs
 		logBody(ctx, res.Body)
 		return nil, err
 	}
-	var listUsersPayload ListUsersPayload
-	err = json.NewDecoder(res.Body).Decode(&listUsersPayload)
-	if err != nil {
-		return nil, err
-	}
 
-	return &listUsersPayload, nil
+	return &target, nil
 }

@@ -2,12 +2,13 @@ package dropbox
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/conductorone/baton-sdk/pkg/uhttp"
 )
 
 // returns access token and expiry time
@@ -31,10 +32,16 @@ func (c *Client) RequestAccessToken(ctx context.Context, appKey, appSecret, refr
 	if err != nil {
 		return "", nil, err
 	}
-
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	res, err := c.Do(req)
+	var target struct {
+		AccessToken string `json:"access_token"`
+		ExpiresIn   int    `json:"expires_in"`
+		TokenType   string `json:"token_type"`
+	}
+	res, err := c.Do(req,
+		uhttp.WithJSONResponse(&target),
+	)
 	defer res.Body.Close()
 	if err != nil {
 		logBody(ctx, res.Body)
@@ -46,17 +53,7 @@ func (c *Client) RequestAccessToken(ctx context.Context, appKey, appSecret, refr
 		return "", nil, fmt.Errorf("error getting access token: %s", res.Status)
 	}
 
-	resType := struct {
-		AccessToken string `json:"access_token"`
-		ExpiresIn   int    `json:"expires_in"`
-		TokenType   string `json:"token_type"`
-	}{}
-	err = json.NewDecoder(res.Body).Decode(&resType)
-	if err != nil {
-		return "", nil, fmt.Errorf("error decoding access token response: %w", err)
-	}
-
-	expiresIn := time.Now().Add(time.Duration(resType.ExpiresIn) * time.Second)
-	return resType.AccessToken, &expiresIn, nil
+	expiresIn := time.Now().Add(time.Duration(target.ExpiresIn) * time.Second)
+	return target.AccessToken, &expiresIn, nil
 
 }
