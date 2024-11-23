@@ -18,7 +18,12 @@ var (
 	RefreshTokenField = field.StringField(
 		"refresh-token",
 		field.WithDescription("The refresh token used to get a new access token"),
-		field.WithRequired(true),
+		field.WithRequired(false),
+	)
+	ConfigureField = field.BoolField(
+		"configure",
+		field.WithDescription("Get the refresh token the first time you run the connector."),
+		field.WithRequired(false),
 	)
 	// ConfigurationFields defines the external configuration required for the
 	// connector to run. Note: these fields can be marked as optional or
@@ -27,5 +32,6 @@ var (
 		AppKey,
 		AppSecret,
 		RefreshTokenField,
+		ConfigureField,
 	}
 )

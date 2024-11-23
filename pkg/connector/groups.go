@@ -16,7 +16,7 @@ import (
 )
 
 type groupBuilder struct {
-	dropbox.Client
+	*dropbox.Client
 }
 
 const groupMembership = "member"
@@ -98,7 +98,7 @@ func (o *groupBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken
 	return outGrants, "", nil, nil
 }
 
-func newGroupBuilder(client dropbox.Client) *groupBuilder {
+func newGroupBuilder(client *dropbox.Client) *groupBuilder {
 	return &groupBuilder{
 		Client: client,
 	}

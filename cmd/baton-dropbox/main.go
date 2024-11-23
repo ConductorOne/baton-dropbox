@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/conductorone/baton-dropbox/pkg/connector"
+	"github.com/conductorone/baton-dropbox/pkg/connector/dropbox"
 	"github.com/conductorone/baton-sdk/pkg/config"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
 	"github.com/conductorone/baton-sdk/pkg/field"
@@ -17,10 +18,13 @@ import (
 
 var version = "dev"
 
+// var configure2 = flag.Bool("configure2", false, "configure the connector")
+
 func main() {
 	ctx := context.Background()
 
-	_, cmd, err := config.DefineConfiguration(
+	// viper, cmd, err := config.DefineConfiguration(
+	v, cmd, err := config.DefineConfiguration(
 		ctx,
 		"baton-dropbox",
 		getConnector,
@@ -30,6 +34,36 @@ func main() {
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
+	}
+
+	configureArg := v.GetBool(ConfigureField.FieldName)
+	if configureArg {
+		fmt.Println("configure")
+		client, err := dropbox.NewClient(ctx)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
+		appKey, appSecret := v.GetString(AppKey.FieldName), v.GetString(AppSecret.FieldName)
+		code, err := client.Authorize(ctx, appKey, appSecret)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
+
+		_, _, refreshToken, err := client.RequestAccessToken(ctx, appKey, appSecret, code)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
+		fmt.Println("refresh token: ", refreshToken)
+		os.Exit(0)
+	}
+
+	refreshTokenArg := v.GetString(RefreshTokenField.FieldName)
+	if refreshTokenArg == "" {
+		fmt.Fprintln(os.Stderr, "refresh-token is required")
 		os.Exit(1)
 	}
 

@@ -14,7 +14,7 @@ import (
 )
 
 type userBuilder struct {
-	dropbox.Client
+	*dropbox.Client
 }
 
 func userResource(user dropbox.User, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
@@ -81,7 +81,7 @@ func (o *userBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken 
 	return nil, "", nil, nil
 }
 
-func newUserBuilder(client dropbox.Client) *userBuilder {
+func newUserBuilder(client *dropbox.Client) *userBuilder {
 	return &userBuilder{
 		Client: client,
 	}

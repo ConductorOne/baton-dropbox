@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
@@ -41,6 +42,8 @@ func (c *Client) ListUsers(ctx context.Context, limit int, includeRemoved bool) 
 	if err != nil {
 		return nil, err
 	}
+	// __AUTO_GENERATED_PRINT_VAR_START__
+	fmt.Println(fmt.Sprintf("ListUsers c.AccessToken: %+v", c.AccessToken)) // __AUTO_GENERATED_PRINT_VAR_END__
 	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
 	req.Header.Set("Content-Type", "application/json")
 

@@ -16,7 +16,7 @@ import (
 )
 
 type roleBuilder struct {
-	dropbox.Client
+	*dropbox.Client
 }
 
 const roleMembership = "member"
@@ -103,7 +103,7 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken 
 	return outGrants, "", nil, nil
 }
 
-func newRoleBuilder(client dropbox.Client) *roleBuilder {
+func newRoleBuilder(client *dropbox.Client) *roleBuilder {
 	return &roleBuilder{
 		Client: client,
 	}

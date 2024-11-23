@@ -12,7 +12,14 @@ import (
 )
 
 type Connector struct {
-	client dropbox.Client
+	client *dropbox.Client
+	config config
+}
+
+type config struct {
+	appKey       string
+	appSecret    string
+	refreshToken string
 }
 
 // ResourceSyncers returns a ResourceSyncer for each resource type that should be synced from the upstream service.
@@ -20,6 +27,7 @@ func (c *Connector) ResourceSyncers(ctx context.Context) []connectorbuilder.Reso
 	return []connectorbuilder.ResourceSyncer{
 		newUserBuilder(c.client),
 		newRoleBuilder(c.client),
+		newGroupBuilder(c.client),
 	}
 }
 
@@ -40,6 +48,11 @@ func (c *Connector) Metadata(ctx context.Context) (*v2.ConnectorMetadata, error)
 // Validate is called to ensure that the connector is properly configured. It should exercise any API credentials
 // to be sure that they are valid.
 func (c *Connector) Validate(ctx context.Context) (annotations.Annotations, error) {
+	accessToken, _, err := c.client.RequestAccessTokenUsingRefreshToken(ctx, c.config.refreshToken, c.config.appKey, c.config.appSecret)
+	if err != nil {
+		return nil, fmt.Errorf("dropbox-connector: error getting access token using refresh token: %w", err)
+	}
+	c.client.AccessToken = accessToken
 	return nil, nil
 }
 
@@ -51,11 +64,11 @@ func New(ctx context.Context, appKey, appSecret, refreshToken string) (*Connecto
 		return nil, fmt.Errorf("error creating dropbox client: %w", err)
 	}
 
-	accessToken, _, err := client.RequestAccessToken(ctx, appKey, appSecret, refreshToken)
-	if err != nil {
-		return nil, fmt.Errorf("error getting access token: %w", err)
-	}
-
-	client.AccessToken = accessToken
-	return &Connector{client: *client}, nil
+	return &Connector{
+		client: client,
+		config: config{
+			appKey:       appKey,
+			appSecret:    appSecret,
+			refreshToken: refreshToken,
+		}}, nil
 }
