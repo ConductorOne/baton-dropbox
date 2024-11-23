@@ -121,6 +121,10 @@ func (c *Client) RequestAccessToken(ctx context.Context, appKey, appSecret, code
 		return "", nil, "", fmt.Errorf("error getting access token: %s", res.Status)
 	}
 
+	logBody(ctx, res.Body)
+	// __AUTO_GENERATED_PRINT_VAR_START__
+	fmt.Println(fmt.Sprintf("RequestAccessToken target: %+v", target)) // __AUTO_GENERATED_PRINT_VAR_END__
+
 	accessTokenexpiresIn := time.Now().Add(time.Duration(target.ExpiresIn) * time.Second)
 	return target.AccessToken, &accessTokenexpiresIn, target.RefreshToken, nil
 }

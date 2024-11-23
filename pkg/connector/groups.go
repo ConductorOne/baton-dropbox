@@ -49,7 +49,7 @@ func (o *groupBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId
 
 	groups, err := o.ListGroups(ctx, 0)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("error listing users: %w", err)
+		return nil, "", nil, fmt.Errorf("error listing groups: %w", err)
 	}
 
 	for _, group := range groups.Groups {
@@ -80,7 +80,7 @@ func (o *groupBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken
 	var outGrants []*v2.Grant
 	group, err := o.ListGroupMembers(ctx, resource.Id.Resource, 0)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("error listing users: %w", err)
+		return nil, "", nil, fmt.Errorf("error listing group members: %w", err)
 	}
 
 	for _, user := range group.Members {
@@ -90,7 +90,7 @@ func (o *groupBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken
 		}
 		nextGrant := grant.NewGrant(
 			resource,
-			roleMembership,
+			groupMembership,
 			principalId,
 		)
 		outGrants = append(outGrants, nextGrant)

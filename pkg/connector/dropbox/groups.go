@@ -79,7 +79,7 @@ func DefaultGroupMembersBody() ListGroupMembersBody {
 
 func (c *Client) ListGroupMembers(ctx context.Context, groupId string, limit int) (*ListGroupMembersPayload, error) {
 	body := DefaultGroupMembersBody()
-	if groupId != "" {
+	if groupId == "" {
 		return nil, fmt.Errorf("groupId is required")
 	}
 	body.Group.GroupID = groupId
@@ -103,6 +103,7 @@ func (c *Client) ListGroupMembers(ctx context.Context, groupId string, limit int
 		uhttp.WithJSONResponse(&target),
 		uhttp.WithRatelimitData(&ratelimitData),
 	)
+
 	if err != nil {
 		return nil, err
 	}

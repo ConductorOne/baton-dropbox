@@ -52,13 +52,13 @@ type ListGroupsPayload struct {
 }
 
 type Group struct {
-	GroupID             string              `json:"group_id"`
-	Name                string              `json:"group_name"`
-	GroupManagementType GroupManagementType `json:"group_management_type"`
-	MemberCount         int                 `json:"member_count"`
+	GroupID             string     `json:"group_id"`
+	Name                string     `json:"group_name"`
+	GroupManagementType AccessType `json:"group_management_type"`
+	MemberCount         int        `json:"member_count"`
 }
 
-type GroupManagementType struct {
+type AccessType struct {
 	Tag string `json:".tag"`
 }
 
@@ -72,5 +72,5 @@ type ListGroupMember struct {
 	Profile User `json:"profile"`
 
 	// owner or member of the group
-	AccessType string `json:"access_type"`
+	AccessType AccessType `json:"access_type"`
 }
