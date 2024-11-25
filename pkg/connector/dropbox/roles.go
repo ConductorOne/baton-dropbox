@@ -20,7 +20,7 @@ type teamMember struct {
 	TeamMemberId string `json:"team_member_id"`
 }
 
-func (c *Client) AddRoleToUser(ctx context.Context, roleId, teamMemberId string) error {
+func (c *Client) AddRoleToUser(ctx context.Context, roleId, teamMemberId string) (*v2.RateLimitDescription, error) {
 	body := addRoleToUserBody{
 		NewRoles:   []string{roleId},
 		TeamMember: teamMember{Tag: "team_member_id", TeamMemberId: teamMemberId},
@@ -30,7 +30,7 @@ func (c *Client) AddRoleToUser(ctx context.Context, roleId, teamMemberId string)
 	err := json.NewEncoder(buffer).Encode(body)
 	req, err := http.NewRequest("POST", AddRoleToUserURL, buffer)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
 	req.Header.Set("Content-Type", "application/json")
@@ -41,16 +41,16 @@ func (c *Client) AddRoleToUser(ctx context.Context, roleId, teamMemberId string)
 	)
 
 	if err != nil {
-		return err
+		return &ratelimitData, err
 	}
 
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		logBody(ctx, res.Body)
-		return err
+		return &ratelimitData, err
 	}
 
-	return nil
+	return &ratelimitData, nil
 }
 
 // endpoint only allows removing all roles, not specific roles

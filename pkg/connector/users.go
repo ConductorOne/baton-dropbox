@@ -17,7 +17,7 @@ type userBuilder struct {
 	*dropbox.Client
 }
 
-func userResource(user dropbox.User, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
+func userResource(user dropbox.Profile, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
 	profile := map[string]interface{}{
 		"id":         user.AccountID,
 		"email":      user.Email,

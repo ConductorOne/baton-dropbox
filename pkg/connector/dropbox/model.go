@@ -3,24 +3,24 @@ package dropbox
 // Users
 
 type ListUsersPayload struct {
-	Cursor  string           `json:"cursor"`
-	HasMore bool             `json:"has_more"`
-	Members []ListUserMember `json:"members"`
+	Cursor  string        `json:"cursor"`
+	HasMore bool          `json:"has_more"`
+	Members []UserPayload `json:"members"`
 }
 
-type ListUserMember struct {
-	Profile User   `json:"profile"`
-	Roles   []Role `json:"roles"`
+type UserPayload struct {
+	Profile Profile `json:"profile"`
+	Roles   []Role  `json:"roles"`
 }
 
-type User struct {
+type Profile struct {
 	AccountID string   `json:"account_id"`
 	Name      Name     `json:"name"`
 	Email     string   `json:"email"`
 	Groups    []string `json:"groups"`
 }
 
-func (u ListUserMember) HasRole(roleID string) bool {
+func (u UserPayload) HasRole(roleID string) bool {
 	for _, role := range u.Roles {
 		if role.RoleID == roleID {
 			return true
@@ -63,14 +63,19 @@ type AccessType struct {
 }
 
 type ListGroupMembersPayload struct {
-	Cursor  string            `json:"cursor"`
-	HasMore bool              `json:"has_more"`
-	Members []ListGroupMember `json:"members"`
+	Cursor  string           `json:"cursor"`
+	HasMore bool             `json:"has_more"`
+	Members []MembersPayload `json:"members"`
 }
 
-type ListGroupMember struct {
-	Profile User `json:"profile"`
+type MembersPayload struct {
+	Profile MembersProfile `json:"profile"`
 
 	// owner or member of the group
 	AccessType AccessType `json:"access_type"`
+}
+
+type MembersProfile struct {
+	Profile
+	TeamMemberID string `json:"team_member_id"`
 }

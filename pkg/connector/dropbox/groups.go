@@ -24,7 +24,7 @@ func DefaultListGroupsBody() ListGroupsBody {
 }
 
 // docs: https://www.dropbox.com/developers/documentation/http/teams#team-groups-list
-func (c *Client) ListGroups(ctx context.Context, limit int) (*ListGroupsPayload, error) {
+func (c *Client) ListGroups(ctx context.Context, limit int) (*ListGroupsPayload, *v2.RateLimitDescription, error) {
 	body := DefaultListGroupsBody()
 	if limit != 0 {
 		body.Limit = limit
@@ -34,7 +34,7 @@ func (c *Client) ListGroups(ctx context.Context, limit int) (*ListGroupsPayload,
 	err := json.NewEncoder(reader).Encode(body)
 	req, err := http.NewRequest("POST", ListGroupsURL, reader)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
 	req.Header.Set("Content-Type", "application/json")
@@ -46,31 +46,64 @@ func (c *Client) ListGroups(ctx context.Context, limit int) (*ListGroupsPayload,
 		uhttp.WithRatelimitData(&ratelimitData),
 	)
 	if err != nil {
-		return nil, err
+		return nil, &ratelimitData, err
 	}
 
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		logBody(ctx, res.Body)
-		return nil, err
+		return nil, &ratelimitData, err
 	}
 
-	return &target, nil
+	return &target, &ratelimitData, nil
+}
+
+func (c *Client) ListGroupsContinue(ctx context.Context, cursor string) (*ListGroupsPayload, *v2.RateLimitDescription, error) {
+	body := struct {
+		Cursor string `json:"cursor"`
+	}{Cursor: cursor}
+
+	reader := new(bytes.Buffer)
+	err := json.NewEncoder(reader).Encode(body)
+	req, err := http.NewRequest("POST", ListGroupsContinueURL, reader)
+	if err != nil {
+		return nil, nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	var target ListGroupsPayload
+	var ratelimitData v2.RateLimitDescription
+	res, err := c.Do(req,
+		uhttp.WithJSONResponse(&target),
+		uhttp.WithRatelimitData(&ratelimitData),
+	)
+	if err != nil {
+		return nil, &ratelimitData, err
+	}
+
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		logBody(ctx, res.Body)
+		return nil, &ratelimitData, err
+	}
+
+	return &target, &ratelimitData, nil
 }
 
 type ListGroupMembersBody struct {
-	Group GroupMembersBody `json:"group"`
-	Limit int              `json:"limit"`
+	Group GroupIdBody `json:"group"`
+	Limit int         `json:"limit"`
 }
 
-type GroupMembersBody struct {
+type GroupIdBody struct {
 	GroupID string `json:"group_id"`
 	Tag     string `json:".tag"`
 }
 
 func DefaultGroupMembersBody() ListGroupMembersBody {
 	return ListGroupMembersBody{
-		Group: GroupMembersBody{
+		Group: GroupIdBody{
 			Tag: "group_id",
 		},
 		Limit: defaultLimit,
@@ -124,7 +157,7 @@ func (c *Client) ListGroupMembersContinue(ctx context.Context, cursor string) (*
 
 	reader := new(bytes.Buffer)
 	err := json.NewEncoder(reader).Encode(body)
-	req, err := http.NewRequest("POST", ListGroupMembersURL, reader)
+	req, err := http.NewRequest("POST", ListGroupMembersContinueURL, reader)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -149,4 +182,59 @@ func (c *Client) ListGroupMembersContinue(ctx context.Context, cursor string) (*
 	}
 
 	return &target, &ratelimitData, nil
+}
+
+// func (c *Client) AddUserToGroup(ctx context.Context, groupId, userId string) error {
+// 	body := struct {
+// 		Group GroupMembersBody `json:"group"`
+// 		User  string           `json:"user"`
+// 	}{
+
+type RemoveUserFromGroupBody struct {
+	Group         GroupIdBody `json:"group"`
+	Users         []UsersBody `json:"users"`
+	ReturnMembers bool        `json:"return_members"`
+}
+
+type UsersBody struct {
+	Tag          string `json:".tag"`
+	TeamMemberId string `json:"team_member_id"`
+}
+
+func (c *Client) RemoveUserFromGroup(ctx context.Context, groupId, teamMemberId string) (*v2.RateLimitDescription, error) {
+	body := RemoveUserFromGroupBody{
+		Group: GroupIdBody{
+			GroupID: groupId,
+			Tag:     "group_id",
+		},
+		Users: []UsersBody{
+			{
+				Tag:          "team_member_id",
+				TeamMemberId: teamMemberId,
+			},
+		},
+	}
+
+	reader := new(bytes.Buffer)
+	err := json.NewEncoder(reader).Encode(body)
+	req, err := http.NewRequest("POST", RemoveUserFromGroupURL, reader)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	var ratelimitData v2.RateLimitDescription
+	res, err := c.Do(req,
+		uhttp.WithRatelimitData(&ratelimitData),
+	)
+	if err != nil {
+		return &ratelimitData, err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return &ratelimitData, err
+	}
+
+	return &ratelimitData, nil
 }

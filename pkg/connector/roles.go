@@ -159,12 +159,14 @@ func (r *roleBuilder) Grant(
 		return nil, fmt.Errorf("baton-dropbox: only users can be granted role membership")
 	}
 
-	err := r.AddRoleToUser(ctx, roleId, userId)
+	rateLimitData, err := r.AddRoleToUser(ctx, roleId, userId)
+	var outputAnnotations annotations.Annotations
+	outputAnnotations.WithRateLimiting(rateLimitData)
 	if err != nil {
-		return nil, fmt.Errorf("baton-dropbox: failed to add user to role: %s", err.Error())
+		return outputAnnotations, fmt.Errorf("baton-dropbox: failed to add user to role: %s", err.Error())
 	}
 
-	return nil, nil
+	return outputAnnotations, nil
 }
 
 func (r *roleBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations.Annotations, error) {
