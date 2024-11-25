@@ -48,22 +48,40 @@ func (o *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 	logger.Debug("Starting Roles List", zap.String("token", pToken.Token))
 	outResources := []*v2.Resource{}
 
-	users, err := o.ListUsers(ctx, 0, false)
-	if err != nil {
-		return nil, "", nil, fmt.Errorf("error listing users: %w", err)
+	var payload *dropbox.ListUsersPayload
+	var rateLimitData *v2.RateLimitDescription
+	var err error
+	var limit int = 100
+
+	if pToken == nil {
+		payload, rateLimitData, err = o.ListUsers(ctx, limit)
+	} else {
+		payload, rateLimitData, err = o.ListUsersContinue(ctx, pToken.Token)
 	}
 
-	for _, user := range users.Members {
+	var outAnnotations annotations.Annotations
+	outAnnotations.WithRateLimiting(rateLimitData)
+
+	if err != nil {
+		return nil, "", outAnnotations, fmt.Errorf("error listing users: %w", err)
+	}
+
+	for _, user := range payload.Members {
 		for _, role := range user.Roles {
 			roleResource, err := roleResource(role, parentResourceID)
 			if err != nil {
-				return nil, "", nil, err
+				return nil, "", outAnnotations, err
 			}
 			outResources = append(outResources, roleResource)
 		}
 	}
 
-	return outResources, "", nil, nil
+	var cursor string
+	if payload.HasMore {
+		cursor = payload.Cursor
+	}
+
+	return outResources, cursor, outAnnotations, nil
 }
 
 func (o *roleBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
@@ -80,18 +98,31 @@ func (o *roleBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *
 
 func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
 	var outGrants []*v2.Grant
-	users, err := o.ListUsers(ctx, 0, false)
+
+	var payload *dropbox.ListUsersPayload
+	var rateLimitData *v2.RateLimitDescription
+	var err error
+	var limit int = 100
+
+	if pToken == nil {
+		payload, rateLimitData, err = o.ListUsers(ctx, limit)
+	} else {
+		payload, rateLimitData, err = o.ListUsersContinue(ctx, pToken.Token)
+	}
+	var outAnnotations annotations.Annotations
+	outAnnotations.WithRateLimiting(rateLimitData)
+
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("error listing users: %w", err)
+		return nil, "", outAnnotations, fmt.Errorf("error listing users: %w", err)
 	}
 
-	for _, user := range users.Members {
+	for _, user := range payload.Members {
 		if !user.HasRole(resource.Id.Resource) {
 			continue
 		}
 		principalId, err := resourceSdk.NewResourceID(userResourceType, user.Profile.AccountID)
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("error creating principal ID: %w", err)
+			return nil, "", outAnnotations, fmt.Errorf("error creating principal ID: %w", err)
 		}
 		nextGrant := grant.NewGrant(
 			resource,
@@ -100,7 +131,12 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken 
 		)
 		outGrants = append(outGrants, nextGrant)
 	}
-	return outGrants, "", nil, nil
+
+	var cursor string
+	if payload.HasMore {
+		cursor = payload.Cursor
+	}
+	return outGrants, cursor, outAnnotations, nil
 }
 
 func newRoleBuilder(client *dropbox.Client) *roleBuilder {

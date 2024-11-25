@@ -49,26 +49,41 @@ func (o *userBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 // Users include a UserTrait because they are the 'shape' of a standard user.
 func (o *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
 	logger := ctxzap.Extract(ctx)
-
 	logger.Debug("Starting Users List", zap.String("token", pToken.Token))
 
 	outResources := []*v2.Resource{}
-	// var outAnnotations annotations.Annotations
+	var payload *dropbox.ListUsersPayload
+	var rateLimitData *v2.RateLimitDescription
+	var err error
+	var limit int = 100
 
-	payload, err := o.ListUsers(ctx, 0, false)
+	if pToken == nil {
+		payload, rateLimitData, err = o.ListUsers(ctx, limit)
+	} else {
+		payload, rateLimitData, err = o.ListUsersContinue(ctx, pToken.Token)
+	}
+
+	var outAnnotations annotations.Annotations
+	outAnnotations.WithRateLimiting(rateLimitData)
+
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("error listing users: %w", err)
+		return nil, "", outAnnotations, fmt.Errorf("error listing users: %w", err)
 	}
 
 	for _, user := range payload.Members {
 		resource, err := userResource(user.Profile, parentResourceID)
 		if err != nil {
-			return nil, "", nil, err
+			return nil, "", outAnnotations, err
 		}
 		outResources = append(outResources, resource)
 	}
 
-	return outResources, "", nil, nil
+	var cursor string
+	if payload.HasMore {
+		cursor = payload.Cursor
+	}
+
+	return outResources, cursor, outAnnotations, nil
 }
 
 // Entitlements always returns an empty slice for users.

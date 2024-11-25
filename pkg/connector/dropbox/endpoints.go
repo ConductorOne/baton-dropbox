@@ -7,8 +7,9 @@ const (
 )
 
 const (
-	ListUsersURL     = BaseURL + "/2/team/members/list_v2"
-	AddRoleToUserURL = BaseURL + "/2/team/members/add_role"
+	ListUsersURL         = BaseURL + "/2/team/members/list_v2"
+	ListUsersContinueURL = BaseURL + "/2/team/members/list/continue_v2"
+	AddRoleToUserURL     = BaseURL + "/2/team/members/add_role"
 )
 
 const (

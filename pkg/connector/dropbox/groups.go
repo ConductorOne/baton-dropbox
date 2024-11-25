@@ -77,10 +77,10 @@ func DefaultGroupMembersBody() ListGroupMembersBody {
 	}
 }
 
-func (c *Client) ListGroupMembers(ctx context.Context, groupId string, limit int) (*ListGroupMembersPayload, error) {
+func (c *Client) ListGroupMembers(ctx context.Context, groupId string, limit int) (*ListGroupMembersPayload, *v2.RateLimitDescription, error) {
 	body := DefaultGroupMembersBody()
 	if groupId == "" {
-		return nil, fmt.Errorf("groupId is required")
+		return nil, nil, fmt.Errorf("groupId is required")
 	}
 	body.Group.GroupID = groupId
 
@@ -92,7 +92,7 @@ func (c *Client) ListGroupMembers(ctx context.Context, groupId string, limit int
 	err := json.NewEncoder(reader).Encode(body)
 	req, err := http.NewRequest("POST", ListGroupMembersURL, reader)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
 	req.Header.Set("Content-Type", "application/json")
@@ -105,14 +105,48 @@ func (c *Client) ListGroupMembers(ctx context.Context, groupId string, limit int
 	)
 
 	if err != nil {
-		return nil, err
+		return nil, &ratelimitData, err
 	}
 
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		logBody(ctx, res.Body)
-		return nil, err
+		return nil, &ratelimitData, err
 	}
 
-	return &target, nil
+	return &target, &ratelimitData, nil
+}
+
+func (c *Client) ListGroupMembersContinue(ctx context.Context, cursor string) (*ListGroupMembersPayload, *v2.RateLimitDescription, error) {
+	body := struct {
+		Cursor string `json:"cursor"`
+	}{Cursor: cursor}
+
+	reader := new(bytes.Buffer)
+	err := json.NewEncoder(reader).Encode(body)
+	req, err := http.NewRequest("POST", ListGroupMembersURL, reader)
+	if err != nil {
+		return nil, nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	var target ListGroupMembersPayload
+	var ratelimitData v2.RateLimitDescription
+	res, err := c.Do(req,
+		uhttp.WithJSONResponse(&target),
+		uhttp.WithRatelimitData(&ratelimitData),
+	)
+
+	if err != nil {
+		return nil, &ratelimitData, err
+	}
+
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		logBody(ctx, res.Body)
+		return nil, &ratelimitData, err
+	}
+
+	return &target, &ratelimitData, nil
 }

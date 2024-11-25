@@ -78,15 +78,26 @@ func (o *groupBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ 
 
 func (o *groupBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
 	var outGrants []*v2.Grant
-	group, err := o.ListGroupMembers(ctx, resource.Id.Resource, 0)
-	if err != nil {
-		return nil, "", nil, fmt.Errorf("error listing group members: %w", err)
+	var payload *dropbox.ListGroupMembersPayload
+	var err error
+	var rateLimitData *v2.RateLimitDescription
+
+	if pToken == nil {
+		payload, rateLimitData, err = o.ListGroupMembers(ctx, resource.Id.Resource, 0)
+	} else {
+		payload, rateLimitData, err = o.ListGroupMembersContinue(ctx, pToken.Token)
 	}
 
-	for _, user := range group.Members {
+	var outAnnotations annotations.Annotations
+	outAnnotations.WithRateLimiting(rateLimitData)
+	if err != nil {
+		return nil, "", outAnnotations, fmt.Errorf("error listing group members: %w", err)
+	}
+
+	for _, user := range payload.Members {
 		principalId, err := resourceSdk.NewResourceID(userResourceType, user.Profile.AccountID)
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("error creating principal ID: %w", err)
+			return nil, "", outAnnotations, fmt.Errorf("error creating principal ID: %w", err)
 		}
 		nextGrant := grant.NewGrant(
 			resource,
@@ -95,7 +106,13 @@ func (o *groupBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken
 		)
 		outGrants = append(outGrants, nextGrant)
 	}
-	return outGrants, "", nil, nil
+
+	var cursor string
+	if payload.HasMore {
+		cursor = payload.Cursor
+	}
+
+	return outGrants, cursor, outAnnotations, nil
 }
 
 func newGroupBuilder(client *dropbox.Client) *groupBuilder {

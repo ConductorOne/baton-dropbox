@@ -10,7 +10,7 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/uhttp"
 )
 
-const defaultListUserLimit = 100
+const listLimitDefault = 100
 
 type ListUserBody struct {
 	Limit          int  `json:"limit"`
@@ -19,46 +19,75 @@ type ListUserBody struct {
 
 func DefaultListUserBody() ListUserBody {
 	return ListUserBody{
-		Limit:          defaultListUserLimit,
+		Limit:          listLimitDefault,
 		IncludeRemoved: false,
 	}
 }
 
-// TODO: https://www.dropbox.com/developers/documentation/http/teams#team-members-list-continue
-func (c *Client) ListUsers(ctx context.Context, limit int, includeRemoved bool) (*ListUsersPayload, error) {
+func (c *Client) ListUsers(ctx context.Context, limit int) (*ListUsersPayload, *v2.RateLimitDescription, error) {
 	body := DefaultListUserBody()
 	if limit != 0 {
 		body.Limit = limit
 	}
-
-	if includeRemoved {
-		body.IncludeRemoved = true
-	}
+	body.IncludeRemoved = true
 
 	reader := new(bytes.Buffer)
 	err := json.NewEncoder(reader).Encode(body)
 	req, err := http.NewRequest("POST", ListUsersURL, reader)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
 	req.Header.Set("Content-Type", "application/json")
 
 	var target ListUsersPayload
-	var ratelimitData v2.RateLimitDescription
+	var rateLimitData v2.RateLimitDescription
 	res, err := c.Do(req,
 		uhttp.WithJSONResponse(&target),
-		uhttp.WithRatelimitData(&ratelimitData),
+		uhttp.WithRatelimitData(&rateLimitData),
 	)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		logBody(ctx, res.Body)
-		return nil, err
+		return nil, nil, err
 	}
 
-	return &target, nil
+	return &target, &rateLimitData, nil
+}
+
+func (c *Client) ListUsersContinue(ctx context.Context, cursor string) (*ListUsersPayload, *v2.RateLimitDescription, error) {
+	body := struct {
+		Cursor string `json:"cursor"`
+	}{Cursor: cursor}
+
+	reader := new(bytes.Buffer)
+	err := json.NewEncoder(reader).Encode(body)
+	req, err := http.NewRequest("POST", ListUsersContinueURL, reader)
+	if err != nil {
+		return nil, nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	var target ListUsersPayload
+	var rateLimitData v2.RateLimitDescription
+	res, err := c.Do(req,
+		uhttp.WithJSONResponse(&target),
+		uhttp.WithRatelimitData(&rateLimitData),
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		logBody(ctx, res.Body)
+		return nil, nil, err
+	}
+
+	return &target, &rateLimitData, nil
 }
