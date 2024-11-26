@@ -177,6 +177,8 @@ func (r *groupBuilder) Grant(
 
 	var rateLimitData *v2.RateLimitDescription
 	switch entitlement.Resource.Id.ResourceType {
+	//TODO: different case for owner and for member
+	//https://www.dropbox.com/developers/documentation/http/teams#team-groups-members-set_access_type
 	case groupMembership:
 		rateLimitData, err = r.AddUserToGroup(ctx, groupId, email, groupMembership)
 	case groupOwner:

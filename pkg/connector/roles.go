@@ -53,6 +53,9 @@ func (o *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 	var err error
 	var limit int = 100
 
+	//TODO: check if this is better
+	// https://www.dropbox.com/developers/documentation/http/teams#team-members-get_available_team_member_roles
+
 	if pToken.Token == "" {
 		payload, rateLimitData, err = o.ListUsers(ctx, limit)
 	} else {
@@ -84,6 +87,7 @@ func (o *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 	return outResources, cursor, outAnnotations, nil
 }
 
+// TODO: should this be dynamic? what if new roles are created?
 func (o *roleBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
 	return []*v2.Entitlement{
 		entitlement.NewAssignmentEntitlement(
