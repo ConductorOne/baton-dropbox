@@ -92,18 +92,18 @@ func (c *Client) ListGroupsContinue(ctx context.Context, cursor string) (*ListGr
 }
 
 type ListGroupMembersBody struct {
-	Group GroupIdBody `json:"group"`
-	Limit int         `json:"limit"`
+	Group GroupIdTag `json:"group"`
+	Limit int        `json:"limit"`
 }
 
-type GroupIdBody struct {
+type GroupIdTag struct {
 	GroupID string `json:"group_id"`
 	Tag     string `json:".tag"`
 }
 
 func DefaultGroupMembersBody() ListGroupMembersBody {
 	return ListGroupMembersBody{
-		Group: GroupIdBody{
+		Group: GroupIdTag{
 			Tag: "group_id",
 		},
 		Limit: defaultLimit,
@@ -191,7 +191,7 @@ func (c *Client) ListGroupMembersContinue(ctx context.Context, cursor string) (*
 // 	}{
 
 type RemoveUserFromGroupBody struct {
-	Group         GroupIdBody `json:"group"`
+	Group         GroupIdTag  `json:"group"`
 	Users         []UsersBody `json:"users"`
 	ReturnMembers bool        `json:"return_members"`
 }
@@ -203,7 +203,7 @@ type UsersBody struct {
 
 func (c *Client) RemoveUserFromGroup(ctx context.Context, groupId, teamMemberId string) (*v2.RateLimitDescription, error) {
 	body := RemoveUserFromGroupBody{
-		Group: GroupIdBody{
+		Group: GroupIdTag{
 			GroupID: groupId,
 			Tag:     "group_id",
 		},
@@ -211,6 +211,95 @@ func (c *Client) RemoveUserFromGroup(ctx context.Context, groupId, teamMemberId 
 			{
 				Tag:          "team_member_id",
 				TeamMemberId: teamMemberId,
+			},
+		},
+	}
+
+	reader := new(bytes.Buffer)
+	err := json.NewEncoder(reader).Encode(body)
+	req, err := http.NewRequest("POST", RemoveUserFromGroupURL, reader)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	var ratelimitData v2.RateLimitDescription
+	res, err := c.Do(req,
+		uhttp.WithRatelimitData(&ratelimitData),
+	)
+	if err != nil {
+		return &ratelimitData, err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return &ratelimitData, err
+	}
+
+	return &ratelimitData, nil
+}
+
+func (c *Client) GetTeamMemberID(ctx context.Context, groupId, userId string) (string, error) {
+	var payload *ListGroupMembersPayload
+	var err error
+	var limit int = 100
+
+	payload, _, err = c.ListGroupMembers(ctx, groupId, limit)
+	if err != nil {
+		return "", fmt.Errorf("baton-dropbox: failed to list group members: %s", err.Error())
+	}
+
+	for _, member := range payload.Members {
+		if member.Profile.AccountID == userId {
+			return member.Profile.TeamMemberID, nil
+		}
+	}
+
+	for payload.HasMore {
+		payload, _, err = c.ListGroupMembersContinue(ctx, payload.Cursor)
+		if err != nil {
+			return "", fmt.Errorf("baton-dropbox: failed to list group members: %s", err.Error())
+		}
+
+		for _, member := range payload.Members {
+			if member.Profile.AccountID == userId {
+				return member.Profile.TeamMemberID, nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("baton-dropbox: user not found in group")
+}
+
+type AddUserToGroupBody struct {
+	Group         GroupIdTag          `json:"group"`
+	Members       []AddToGroupMembers `json:"members"`
+	ReturnMembers bool                `json:"return_members"`
+}
+
+type AddToGroupMembers struct {
+	AccessLevel string  `json:"access_level"`
+	UserTag     UserTag `json:"members"`
+}
+
+type UserTag struct {
+	Tag          string `json:".tag"`
+	TeamMemberID string `json:"team_member_id"`
+}
+
+func (c *Client) AddUserToGroup(ctx context.Context, groupId, userId, accessType string) (*v2.RateLimitDescription, error) {
+	body := AddUserToGroupBody{
+		Group: GroupIdTag{
+			Tag:     "group_id",
+			GroupID: groupId,
+		},
+		Members: []AddToGroupMembers{
+			{
+				AccessLevel: accessType,
+				UserTag: UserTag{
+					Tag:          "team_member_id",
+					TeamMemberID: userId,
+				},
 			},
 		},
 	}

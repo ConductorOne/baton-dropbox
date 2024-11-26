@@ -53,7 +53,7 @@ func (o *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 	var err error
 	var limit int = 100
 
-	if pToken == nil {
+	if pToken.Token == "" {
 		payload, rateLimitData, err = o.ListUsers(ctx, limit)
 	} else {
 		payload, rateLimitData, err = o.ListUsersContinue(ctx, pToken.Token)
@@ -104,7 +104,7 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken 
 	var err error
 	var limit int = 100
 
-	if pToken == nil {
+	if pToken.Token == "" {
 		payload, rateLimitData, err = o.ListUsers(ctx, limit)
 	} else {
 		payload, rateLimitData, err = o.ListUsersContinue(ctx, pToken.Token)

@@ -8,6 +8,7 @@ import (
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
+	"github.com/conductorone/baton-sdk/pkg/types/resource"
 	resourceSdk "github.com/conductorone/baton-sdk/pkg/types/resource"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
@@ -57,7 +58,7 @@ func (o *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 	var err error
 	var limit int = 100
 
-	if pToken == nil {
+	if pToken.Token == "" {
 		payload, rateLimitData, err = o.ListUsers(ctx, limit)
 	} else {
 		payload, rateLimitData, err = o.ListUsersContinue(ctx, pToken.Token)
@@ -100,4 +101,19 @@ func newUserBuilder(client *dropbox.Client) *userBuilder {
 	return &userBuilder{
 		Client: client,
 	}
+}
+
+func getEmail(principal *v2.Resource) (string, error) {
+	userTrait, err := resource.GetUserTrait(principal)
+	if err != nil {
+		return "", err
+	}
+
+	for _, email := range userTrait.GetEmails() {
+		if email.IsPrimary {
+			return email.Address, nil
+
+		}
+	}
+	return "", fmt.Errorf("no primary email found for user")
 }

@@ -18,5 +18,6 @@ const (
 	ListGroupMembersURL         = BaseURL + "/2/team/groups/members/list"
 	ListGroupMembersContinueURL = BaseURL + "/2/team/groups/members/list/continue"
 	AddGroupAccessTypeToUserURL = BaseURL + "/2/team/groups/members/set_access_type"
+	AddUserToGroupURL           = BaseURL + "/2/team/groups/members/add"
 	RemoveUserFromGroupURL      = BaseURL + "/2/team/groups/members/remove"
 )
