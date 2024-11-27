@@ -28,7 +28,10 @@ func (c *Client) AddRoleToUser(ctx context.Context, roleId, teamMemberId string)
 
 	buffer := new(bytes.Buffer)
 	err := json.NewEncoder(buffer).Encode(body)
-	req, err := http.NewRequest("POST", AddRoleToUserURL, buffer)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, AddRoleToUserURL, buffer)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +67,10 @@ func (c *Client) ClearRoles(ctx context.Context, teamMemberId string) (*v2.RateL
 
 	buffer := new(bytes.Buffer)
 	err := json.NewEncoder(buffer).Encode(body)
-	req, err := http.NewRequest("POST", AddRoleToUserURL, buffer)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, AddRoleToUserURL, buffer)
 	if err != nil {
 		return nil, err
 	}

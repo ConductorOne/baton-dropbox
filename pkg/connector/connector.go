@@ -58,7 +58,6 @@ func (c *Connector) Validate(ctx context.Context) (annotations.Annotations, erro
 
 // New returns a new instance of the connector.
 func New(ctx context.Context, appKey, appSecret, refreshToken string) (*Connector, error) {
-
 	client, err := dropbox.NewClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error creating dropbox client: %w", err)

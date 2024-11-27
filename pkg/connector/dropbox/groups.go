@@ -32,7 +32,11 @@ func (c *Client) ListGroups(ctx context.Context, limit int) (*ListGroupsPayload,
 
 	reader := new(bytes.Buffer)
 	err := json.NewEncoder(reader).Encode(body)
-	req, err := http.NewRequest("POST", ListGroupsURL, reader)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ListGroupsURL, reader)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -65,7 +69,10 @@ func (c *Client) ListGroupsContinue(ctx context.Context, cursor string) (*ListGr
 
 	reader := new(bytes.Buffer)
 	err := json.NewEncoder(reader).Encode(body)
-	req, err := http.NewRequest("POST", ListGroupsContinueURL, reader)
+	if err != nil {
+		return nil, nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ListGroupsContinueURL, reader)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -123,7 +130,10 @@ func (c *Client) ListGroupMembers(ctx context.Context, groupId string, limit int
 
 	reader := new(bytes.Buffer)
 	err := json.NewEncoder(reader).Encode(body)
-	req, err := http.NewRequest("POST", ListGroupMembersURL, reader)
+	if err != nil {
+		return nil, nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ListGroupMembersURL, reader)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -157,7 +167,10 @@ func (c *Client) ListGroupMembersContinue(ctx context.Context, cursor string) (*
 
 	reader := new(bytes.Buffer)
 	err := json.NewEncoder(reader).Encode(body)
-	req, err := http.NewRequest("POST", ListGroupMembersContinueURL, reader)
+	if err != nil {
+		return nil, nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ListGroupMembersContinueURL, reader)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -217,7 +230,10 @@ func (c *Client) RemoveUserFromGroup(ctx context.Context, groupId, teamMemberId 
 
 	reader := new(bytes.Buffer)
 	err := json.NewEncoder(reader).Encode(body)
-	req, err := http.NewRequest("POST", RemoveUserFromGroupURL, reader)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, RemoveUserFromGroupURL, reader)
 	if err != nil {
 		return nil, err
 	}
@@ -232,6 +248,7 @@ func (c *Client) RemoveUserFromGroup(ctx context.Context, groupId, teamMemberId 
 		return &ratelimitData, err
 	}
 
+	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		return &ratelimitData, err
 	}
@@ -306,7 +323,10 @@ func (c *Client) AddUserToGroup(ctx context.Context, groupId, userId, accessType
 
 	reader := new(bytes.Buffer)
 	err := json.NewEncoder(reader).Encode(body)
-	req, err := http.NewRequest("POST", RemoveUserFromGroupURL, reader)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, RemoveUserFromGroupURL, reader)
 	if err != nil {
 		return nil, err
 	}
@@ -321,6 +341,7 @@ func (c *Client) AddUserToGroup(ctx context.Context, groupId, userId, accessType
 		return &ratelimitData, err
 	}
 
+	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		return &ratelimitData, err
 	}

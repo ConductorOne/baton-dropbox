@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -31,7 +32,7 @@ func (c *Client) RequestAccessTokenUsingRefreshToken(ctx context.Context, refres
 	form.Set("refresh_token", refreshToken)
 	form.Set("grant_type", grantType)
 
-	req, err := http.NewRequest("POST", TokenURL, strings.NewReader(form.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, TokenURL, strings.NewReader(form.Encode()))
 	if err != nil {
 		return "", nil, err
 	}
@@ -45,12 +46,11 @@ func (c *Client) RequestAccessTokenUsingRefreshToken(ctx context.Context, refres
 	res, err := c.Do(req,
 		uhttp.WithJSONResponse(&target),
 	)
-	defer res.Body.Close()
 	if err != nil {
-		logBody(ctx, res.Body)
 		return "", nil, err
 	}
 
+	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		logBody(ctx, res.Body)
 		return "", nil, fmt.Errorf("error getting access token: %s", res.Status)
@@ -66,9 +66,9 @@ func (c *Client) Authorize(ctx context.Context, appKey, appSecret string) (strin
 		return "", fmt.Errorf("dropbox-connector: non-interactive mode not supported. Pass a refresh token as an argument ")
 	}
 
-	url := fmt.Sprintf(AuthURL + "?client_id=" + appKey + "&token_access_type=offline&response_type=code")
-	fmt.Printf("\nOpen this link in your browser: " + url)
-	fmt.Printf("\nPaste the code: ")
+	url := fmt.Sprintf("%s?client_id=%s&token_access_type=offline&response_type=code", AuthURL, appKey)
+	log.Printf("\nOpen this link in your browser: %s", url)
+	log.Printf("\nPaste the code: ")
 
 	var code string
 
@@ -76,7 +76,7 @@ func (c *Client) Authorize(ctx context.Context, appKey, appSecret string) (strin
 	if scanner.Scan() {
 		code = scanner.Text()
 		code = strings.TrimSpace(code) // Remove any leading or trailing whitespace
-		fmt.Printf("You entered: %s\n", code)
+		log.Printf("You entered: %s\n", code)
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -95,7 +95,7 @@ func (c *Client) RequestAccessToken(ctx context.Context, appKey, appSecret, code
 	form.Set("client_secret", appSecret)
 	form.Set("code", code)
 
-	req, err := http.NewRequest("POST", TokenURL, strings.NewReader(form.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, TokenURL, strings.NewReader(form.Encode()))
 	if err != nil {
 		return "", nil, "", err
 	}
@@ -110,20 +110,15 @@ func (c *Client) RequestAccessToken(ctx context.Context, appKey, appSecret, code
 	res, err := c.Do(req,
 		uhttp.WithJSONResponse(&target),
 	)
-	defer res.Body.Close()
 	if err != nil {
-		logBody(ctx, res.Body)
 		return "", nil, "", err
 	}
 
+	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		logBody(ctx, res.Body)
 		return "", nil, "", fmt.Errorf("error getting access token: %s", res.Status)
 	}
-
-	logBody(ctx, res.Body)
-	// __AUTO_GENERATED_PRINT_VAR_START__
-	fmt.Println(fmt.Sprintf("RequestAccessToken target: %+v", target)) // __AUTO_GENERATED_PRINT_VAR_END__
 
 	accessTokenexpiresIn := time.Now().Add(time.Duration(target.ExpiresIn) * time.Second)
 	return target.AccessToken, &accessTokenexpiresIn, target.RefreshToken, nil

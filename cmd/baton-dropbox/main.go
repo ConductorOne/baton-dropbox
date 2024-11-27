@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/conductorone/baton-dropbox/pkg/connector"
@@ -39,7 +40,6 @@ func main() {
 
 	configureArg := v.GetBool(ConfigureField.FieldName)
 	if configureArg {
-		fmt.Println("configure")
 		client, err := dropbox.NewClient(ctx)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
@@ -57,7 +57,7 @@ func main() {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
-		fmt.Println("refresh token: ", refreshToken)
+		log.Println("refresh token: ", refreshToken)
 		os.Exit(0)
 	}
 

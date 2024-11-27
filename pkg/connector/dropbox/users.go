@@ -33,7 +33,10 @@ func (c *Client) ListUsers(ctx context.Context, limit int) (*ListUsersPayload, *
 
 	reader := new(bytes.Buffer)
 	err := json.NewEncoder(reader).Encode(body)
-	req, err := http.NewRequest("POST", ListUsersURL, reader)
+	if err != nil {
+		return nil, nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ListUsersURL, reader)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -66,7 +69,11 @@ func (c *Client) ListUsersContinue(ctx context.Context, cursor string) (*ListUse
 
 	reader := new(bytes.Buffer)
 	err := json.NewEncoder(reader).Encode(body)
-	req, err := http.NewRequest("POST", ListUsersContinueURL, reader)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ListUsersContinueURL, reader)
 	if err != nil {
 		return nil, nil, err
 	}

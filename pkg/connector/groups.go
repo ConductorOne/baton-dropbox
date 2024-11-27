@@ -172,7 +172,7 @@ func (r *groupBuilder) Grant(
 
 	email, err := getEmail(principal)
 	if err != nil {
-		return nil, fmt.Errorf("baton-auth0: failed to get email for user: %s", err)
+		return nil, fmt.Errorf("baton-auth0: failed to get email for user: %w", err)
 	}
 
 	var rateLimitData *v2.RateLimitDescription
@@ -188,7 +188,7 @@ func (r *groupBuilder) Grant(
 	var outputAnnotations annotations.Annotations
 	outputAnnotations.WithRateLimiting(rateLimitData)
 	if err != nil {
-		return outputAnnotations, fmt.Errorf("baton-dropbox: failed to add user to role: %s", err)
+		return outputAnnotations, fmt.Errorf("baton-dropbox: failed to add user to role: %w", err)
 	}
 
 	return outputAnnotations, nil
@@ -206,14 +206,14 @@ func (r *groupBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations
 
 	email, err := getEmail(principal)
 	if err != nil {
-		return nil, fmt.Errorf("baton-auth0: failed to get email for user: %s", err)
+		return nil, fmt.Errorf("baton-auth0: failed to get email for user: %w", err)
 	}
 
 	ratelimitData, err := r.RemoveUserFromGroup(ctx, groupId, email)
 	var outputAnnotations annotations.Annotations
 	outputAnnotations.WithRateLimiting(ratelimitData)
 	if err != nil {
-		return outputAnnotations, fmt.Errorf("baton-dropbox: failed to revoke membership to role: %s", err.Error())
+		return outputAnnotations, fmt.Errorf("baton-dropbox: failed to revoke membership to role: %w", err)
 	}
 
 	return outputAnnotations, nil

@@ -112,7 +112,6 @@ func getEmail(principal *v2.Resource) (string, error) {
 	for _, email := range userTrait.GetEmails() {
 		if email.IsPrimary {
 			return email.Address, nil
-
 		}
 	}
 	return "", fmt.Errorf("no primary email found for user")
