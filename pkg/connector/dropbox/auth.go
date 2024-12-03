@@ -22,14 +22,17 @@ import (
 //	    -d refresh_token=<refresh_token> \
 //	    -d client_id=<app_key> \
 //	    -d client_secret=<app_secret>
-func (c *Client) RequestAccessTokenUsingRefreshToken(ctx context.Context, refreshToken, appKey, appSecret string) (string, *time.Time, error) {
+func (c *Client) RequestAccessTokenUsingRefreshToken(ctx context.Context) (string, *time.Time, error) {
+	if c.RefreshToken == "" {
+		return "", nil, fmt.Errorf("dropbox-connector: refresh token is empty, run with --configure flag to get a refresh token")
+	}
 	// get an access token using the refresh token
 	grantType := "refresh_token"
 
 	form := url.Values{}
-	form.Set("client_id", appKey)
-	form.Set("client_secret", appSecret)
-	form.Set("refresh_token", refreshToken)
+	form.Set("client_id", c.AppKey)
+	form.Set("client_secret", c.AppSecret)
+	form.Set("refresh_token", c.RefreshToken)
 	form.Set("grant_type", grantType)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, TokenURL, strings.NewReader(form.Encode()))
@@ -86,13 +89,13 @@ func (c *Client) Authorize(ctx context.Context, appKey, appSecret string) (strin
 	return code, nil
 }
 
-func (c *Client) RequestAccessToken(ctx context.Context, appKey, appSecret, code string) (string, *time.Time, string, error) {
+func (c *Client) RequestAccessToken(ctx context.Context, code string) (string, *time.Time, string, error) {
 	grantType := "authorization_code"
 
 	form := url.Values{}
 	form.Set("grant_type", grantType)
-	form.Set("client_id", appKey)
-	form.Set("client_secret", appSecret)
+	form.Set("client_id", c.AppKey)
+	form.Set("client_secret", c.AppSecret)
 	form.Set("code", code)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, TokenURL, strings.NewReader(form.Encode()))

@@ -10,10 +10,17 @@ import (
 type Client struct {
 	// http.Client
 	uhttp.BaseHttpClient
+	Config
 	AccessToken string
 }
 
-func NewClient(ctx context.Context) (*Client, error) {
+type Config struct {
+	AppKey       string
+	AppSecret    string
+	RefreshToken string
+}
+
+func NewClient(ctx context.Context, config Config) (*Client, error) {
 	httpClient, err := uhttp.NewClient(
 		ctx,
 		uhttp.WithLogger(
@@ -30,7 +37,9 @@ func NewClient(ctx context.Context) (*Client, error) {
 		return nil, err
 	}
 
-	return &Client{
+	client := &Client{
 		BaseHttpClient: *wrapper,
-	}, nil
+		Config:         config,
+	}
+	return client, nil
 }

@@ -197,43 +197,37 @@ func (c *Client) ListGroupMembersContinue(ctx context.Context, cursor string) (*
 	return &target, &ratelimitData, nil
 }
 
-// func (c *Client) AddUserToGroup(ctx context.Context, groupId, userId string) error {
-// 	body := struct {
-// 		Group GroupMembersBody `json:"group"`
-// 		User  string           `json:"user"`
-// 	}{
-
 type RemoveUserFromGroupBody struct {
-	Group         GroupIdTag  `json:"group"`
-	Users         []UsersBody `json:"users"`
-	ReturnMembers bool        `json:"return_members"`
+	Group         GroupIdTag `json:"group"`
+	Users         []EmailTag `json:"users"`
+	ReturnMembers bool       `json:"return_members"`
 }
 
-type UsersBody struct {
-	Tag          string `json:".tag"`
-	TeamMemberId string `json:"team_member_id"`
+type EmailTag struct {
+	Tag   string `json:".tag"`
+	Email string `json:"email"`
 }
 
-func (c *Client) RemoveUserFromGroup(ctx context.Context, groupId, teamMemberId string) (*v2.RateLimitDescription, error) {
+func (c *Client) RemoveUserFromGroup(ctx context.Context, groupId, email string) (*v2.RateLimitDescription, error) {
 	body := RemoveUserFromGroupBody{
 		Group: GroupIdTag{
 			GroupID: groupId,
 			Tag:     "group_id",
 		},
-		Users: []UsersBody{
+		Users: []EmailTag{
 			{
-				Tag:          "team_member_id",
-				TeamMemberId: teamMemberId,
+				Tag:   "email",
+				Email: email,
 			},
 		},
 	}
 
-	reader := new(bytes.Buffer)
-	err := json.NewEncoder(reader).Encode(body)
+	buffer := new(bytes.Buffer)
+	err := json.NewEncoder(buffer).Encode(body)
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, RemoveUserFromGroupURL, reader)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, RemoveUserFromGroupURL, buffer)
 	if err != nil {
 		return nil, err
 	}
@@ -244,12 +238,15 @@ func (c *Client) RemoveUserFromGroup(ctx context.Context, groupId, teamMemberId 
 	res, err := c.Do(req,
 		uhttp.WithRatelimitData(&ratelimitData),
 	)
+
 	if err != nil {
+		logBody(ctx, res.Body)
 		return &ratelimitData, err
 	}
 
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
+		logBody(ctx, res.Body)
 		return &ratelimitData, err
 	}
 
@@ -295,16 +292,11 @@ type AddUserToGroupBody struct {
 }
 
 type AddToGroupMembers struct {
-	AccessLevel string  `json:"access_level"`
-	UserTag     UserTag `json:"members"`
+	AccessLevel string   `json:"access_type"`
+	User        EmailTag `json:"user"`
 }
 
-type UserTag struct {
-	Tag          string `json:".tag"`
-	TeamMemberID string `json:"team_member_id"`
-}
-
-func (c *Client) AddUserToGroup(ctx context.Context, groupId, userId, accessType string) (*v2.RateLimitDescription, error) {
+func (c *Client) AddUserToGroup(ctx context.Context, groupId, email, accessType string) (*v2.RateLimitDescription, error) {
 	body := AddUserToGroupBody{
 		Group: GroupIdTag{
 			Tag:     "group_id",
@@ -313,20 +305,21 @@ func (c *Client) AddUserToGroup(ctx context.Context, groupId, userId, accessType
 		Members: []AddToGroupMembers{
 			{
 				AccessLevel: accessType,
-				UserTag: UserTag{
-					Tag:          "team_member_id",
-					TeamMemberID: userId,
+				User: EmailTag{
+					Tag:   "email",
+					Email: email,
 				},
 			},
 		},
 	}
 
-	reader := new(bytes.Buffer)
-	err := json.NewEncoder(reader).Encode(body)
+	buf := new(bytes.Buffer)
+	err := json.NewEncoder(buf).Encode(body)
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, RemoveUserFromGroupURL, reader)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, AddUserToGroupURL, buf)
 	if err != nil {
 		return nil, err
 	}
@@ -338,11 +331,13 @@ func (c *Client) AddUserToGroup(ctx context.Context, groupId, userId, accessType
 		uhttp.WithRatelimitData(&ratelimitData),
 	)
 	if err != nil {
+		logBody(ctx, res.Body)
 		return &ratelimitData, err
 	}
 
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
+		logBody(ctx, res.Body)
 		return &ratelimitData, err
 	}
 

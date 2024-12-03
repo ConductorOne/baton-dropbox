@@ -176,13 +176,11 @@ func (r *groupBuilder) Grant(
 	}
 
 	var rateLimitData *v2.RateLimitDescription
-	switch entitlement.Resource.Id.ResourceType {
-	//TODO: different case for owner and for member
-	//https://www.dropbox.com/developers/documentation/http/teams#team-groups-members-set_access_type
+	switch entitlement.Slug {
 	case groupMembership:
 		rateLimitData, err = r.AddUserToGroup(ctx, groupId, email, groupMembership)
 	case groupOwner:
-		rateLimitData, err = r.AddUserToGroup(ctx, groupId, email, groupMembership)
+		rateLimitData, err = r.AddUserToGroup(ctx, groupId, email, groupOwner)
 	}
 
 	var outputAnnotations annotations.Annotations
@@ -196,7 +194,6 @@ func (r *groupBuilder) Grant(
 
 func (r *groupBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations.Annotations, error) {
 	principal := grant.Principal
-
 	entitlement := grant.Entitlement
 	groupId := entitlement.Resource.Id.Resource
 
@@ -213,8 +210,7 @@ func (r *groupBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations
 	var outputAnnotations annotations.Annotations
 	outputAnnotations.WithRateLimiting(ratelimitData)
 	if err != nil {
-		return outputAnnotations, fmt.Errorf("baton-dropbox: failed to revoke membership to role: %w", err)
+		return outputAnnotations, fmt.Errorf("baton-dropbox: failed to revoke membership to group: %w", err)
 	}
-
 	return outputAnnotations, nil
 }

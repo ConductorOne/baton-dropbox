@@ -26,3 +26,7 @@ add-dep:
 .PHONY: lint
 lint:
 	golangci-lint run
+
+.PHONY: run
+run:
+	go run ./cmd/baton-dropbox

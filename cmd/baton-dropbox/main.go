@@ -29,9 +29,7 @@ func main() {
 		ctx,
 		"baton-dropbox",
 		getConnector,
-		field.Configuration{
-			Fields: ConfigurationFields,
-		},
+		field.NewConfiguration(ConfigurationFields),
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
@@ -40,19 +38,23 @@ func main() {
 
 	configureArg := v.GetBool(ConfigureField.FieldName)
 	if configureArg {
-		client, err := dropbox.NewClient(ctx)
+		appKey, appSecret := v.GetString(AppKey.FieldName), v.GetString(AppSecret.FieldName)
+
+		client, err := dropbox.NewClient(ctx, dropbox.Config{
+			AppKey:    appKey,
+			AppSecret: appSecret,
+		})
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
-		appKey, appSecret := v.GetString(AppKey.FieldName), v.GetString(AppSecret.FieldName)
 		code, err := client.Authorize(ctx, appKey, appSecret)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
 
-		_, _, refreshToken, err := client.RequestAccessToken(ctx, appKey, appSecret, code)
+		_, _, refreshToken, err := client.RequestAccessToken(ctx, code)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
