@@ -11,19 +11,14 @@ import (
 )
 
 type addRoleToUserBody struct {
-	NewRoles   []string   `json:"new_roles"`
-	TeamMember teamMember `json:"user"`
+	NewRoles   []string `json:"new_roles"`
+	TeamMember EmailTag `json:"user"`
 }
 
-type teamMember struct {
-	Tag          string `json:".tag"`
-	TeamMemberId string `json:"team_member_id"`
-}
-
-func (c *Client) AddRoleToUser(ctx context.Context, roleId, teamMemberId string) (*v2.RateLimitDescription, error) {
+func (c *Client) AddRoleToUser(ctx context.Context, roleId, email string) (*v2.RateLimitDescription, error) {
 	body := addRoleToUserBody{
 		NewRoles:   []string{roleId},
-		TeamMember: teamMember{Tag: "team_member_id", TeamMemberId: teamMemberId},
+		TeamMember: EmailTag{Tag: "email", Email: email},
 	}
 
 	buffer := new(bytes.Buffer)
@@ -59,10 +54,10 @@ func (c *Client) AddRoleToUser(ctx context.Context, roleId, teamMemberId string)
 // endpoint only allows removing all roles, not specific roles
 // also removing them all leaves the user with the member role by default
 // https://www.dropbox.com/developers/documentation/http/teams#team-members-set_admin_permissions
-func (c *Client) ClearRoles(ctx context.Context, teamMemberId string) (*v2.RateLimitDescription, error) {
+func (c *Client) ClearRoles(ctx context.Context, email string) (*v2.RateLimitDescription, error) {
 	body := addRoleToUserBody{
 		NewRoles:   []string{},
-		TeamMember: teamMember{Tag: "team_member_id", TeamMemberId: teamMemberId},
+		TeamMember: EmailTag{Tag: "email", Email: email},
 	}
 
 	buffer := new(bytes.Buffer)
@@ -83,6 +78,7 @@ func (c *Client) ClearRoles(ctx context.Context, teamMemberId string) (*v2.RateL
 	)
 
 	if err != nil {
+		logBody(ctx, res.Body)
 		return &ratelimitData, err
 	}
 

@@ -18,7 +18,8 @@ jobs:
         with:
           version: latest
           args: --timeout=3m
-  test:
+
+  test-groups:
     runs-on: ubuntu-latest
 
     env:
@@ -28,6 +29,67 @@ jobs:
       # Connector-specific details
       CONNECTOR_GRANT: 'group:g:972aa9fd605e45b50000000000000034:owner:user:dbid:AADSHngsuonaSYR4BHryfeXi9A9CKQ1VOaI'
       CONNECTOR_ENTITLEMENT: 'group:g:972aa9fd605e45b50000000000000034:owner'
+      CONNECTOR_PRINCIPAL: 'dbid:AADSHngsuonaSYR4BHryfeXi9A9CKQ1VOaI'
+      CONNECTOR_PRINCIPAL_TYPE: 'user'
+
+      # Secrets for Baton authentication
+      BATON_REFRESH_TOKEN: "${{ secrets.BATON_REFRESH_TOKEN }}"
+      BATON_APP_KEY: "${{ secrets.BATON_APP_KEY }}"
+      BATON_APP_SECRET: "${{ secrets.BATON_APP_SECRET }}"
+
+    steps:
+      # Step 1: Set up Go environment
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.22.x
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Build baton-dropbox
+        run: go build ./cmd/baton-dropbox
+      - name: Run baton-dropbox
+        run: ./baton-dropbox
+      - name: Install baton
+        run: ./scripts/get-baton.sh && mv baton /usr/local/bin
+
+      # tests
+      - name: Check for grant before revoking
+        run: |
+          baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | \
+          jq --exit-status ".grants[].principal.id.resource == \"${{ env.CONNECTOR_PRINCIPAL }}\""
+
+      - name: Revoke grants
+        run: ./baton-dropbox --revoke-grant="${{ env.CONNECTOR_GRANT }}"
+
+      - name: Check grant was revoked
+        run: |
+          ./baton-dropbox && \
+          baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | \
+          jq --exit-status "if .grants then .grants[]?.principal.id.resource != \"${{ env.CONNECTOR_PRINCIPAL }}\" else . end"
+
+      - name: Grant entitlement
+        run: |
+          ./baton-dropbox --grant-entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" \
+                          --grant-principal="${{ env.CONNECTOR_PRINCIPAL }}" \
+                          --grant-principal-type="${{ env.CONNECTOR_PRINCIPAL_TYPE }}"
+
+      - name: Check grant was re-granted
+        run: |
+          ./baton-dropbox && \
+          baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | \
+          jq --exit-status ".grants[].principal.id.resource == \"${{ env.CONNECTOR_PRINCIPAL }}\""
+
+
+  test-roles:
+    runs-on: ubuntu-latest
+
+    env:
+      # Logging level for Baton
+      BATON_LOG_LEVEL: debug
+
+      # Connector-specific details
+      CONNECTOR_GRANT: 'role:pid_dbtmr:AAAAAFMcx6E0tax39Kb0H671TzWLeE07dwaqFQ5fDRy2:member:user:dbid:AADSHngsuonaSYR4BHryfeXi9A9CKQ1VOaI'
+      CONNECTOR_ENTITLEMENT: 'role:pid_dbtmr:AAAAAFMcx6E0tax39Kb0H671TzWLeE07dwaqFQ5fDRy2:member'
       CONNECTOR_PRINCIPAL: 'dbid:AADSHngsuonaSYR4BHryfeXi9A9CKQ1VOaI'
       CONNECTOR_PRINCIPAL_TYPE: 'user'
 

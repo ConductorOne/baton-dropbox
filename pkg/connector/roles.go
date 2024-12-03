@@ -157,13 +157,17 @@ func (r *roleBuilder) Grant(
 	annotations.Annotations,
 	error,
 ) {
-	userId := principal.Id.Resource
 	roleId := entitlement.Resource.Id.Resource
 	if principal.Id.ResourceType != userResourceType.Id {
 		return nil, fmt.Errorf("baton-dropbox: only users can be granted role membership")
 	}
 
-	rateLimitData, err := r.AddRoleToUser(ctx, roleId, userId)
+	email, err := getEmail(principal)
+	if err != nil {
+		return nil, fmt.Errorf("baton-dropbox: failed to get email: %w", err)
+	}
+
+	rateLimitData, err := r.AddRoleToUser(ctx, roleId, email)
 	var outputAnnotations annotations.Annotations
 	outputAnnotations.WithRateLimiting(rateLimitData)
 	if err != nil {
@@ -175,14 +179,18 @@ func (r *roleBuilder) Grant(
 
 func (r *roleBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations.Annotations, error) {
 	principal := grant.Principal
-	userId := principal.Id.Resource
 
 	if principal.Id.ResourceType != userResourceType.Id {
 		return nil, fmt.Errorf("baton-auth0: only users can have role membership revoked")
 	}
 
+	email, err := getEmail(principal)
+	if err != nil {
+		return nil, fmt.Errorf("baton-auth0: failed to get email: %s", err.Error())
+	}
+
 	var outputAnnotations annotations.Annotations
-	ratelimitData, err := r.ClearRoles(ctx, userId)
+	ratelimitData, err := r.ClearRoles(ctx, email)
 	outputAnnotations.WithRateLimiting(ratelimitData)
 
 	if err != nil {
