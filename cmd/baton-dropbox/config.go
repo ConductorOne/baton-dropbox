@@ -7,17 +7,17 @@ import (
 var (
 	AppKey = field.StringField(
 		"app-key",
-		field.WithDescription("Your app's key"),
+		field.WithDescription("The app key used to authenticate with Dropbox"),
 		field.WithRequired(true),
 	)
 	AppSecret = field.StringField(
 		"app-secret",
-		field.WithDescription("Your app's secret"),
+		field.WithDescription("The app secret used to authenticate with Dropbox"),
 		field.WithRequired(true),
 	)
 	RefreshTokenField = field.StringField(
 		"refresh-token",
-		field.WithDescription("The refresh token used to get a new access token"),
+		field.WithDescription("The refresh token used to get an access token for authentication with Dropbox"),
 		field.WithRequired(false),
 	)
 	ConfigureField = field.BoolField(
@@ -34,4 +34,5 @@ var (
 		RefreshTokenField,
 		ConfigureField,
 	}
+	ConfigurationSchema = field.NewConfiguration(ConfigurationFields)
 )

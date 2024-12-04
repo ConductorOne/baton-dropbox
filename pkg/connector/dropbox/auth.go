@@ -74,12 +74,10 @@ func (c *Client) Authorize(ctx context.Context, appKey, appSecret string) (strin
 	log.Printf("\nPaste the code: ")
 
 	var code string
-
 	scanner := bufio.NewScanner(os.Stdin)
 	if scanner.Scan() {
 		code = scanner.Text()
 		code = strings.TrimSpace(code) // Remove any leading or trailing whitespace
-		log.Printf("You entered: %s\n", code)
 	}
 
 	if err := scanner.Err(); err != nil {

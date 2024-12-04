@@ -21,11 +21,12 @@ func (c *Connector) ResourceSyncers(ctx context.Context) []connectorbuilder.Reso
 		newUserBuilder(c.client),
 		newRoleBuilder(c.client),
 		newGroupBuilder(c.client),
+		// newFolderBuilder(c.client), // WIP
 	}
 }
 
 // Asset takes an input AssetRef and attempts to fetch it using the connector's authenticated http client
-// It streams a response, always starting with a metadata object, following by chunked payloads for the asset.
+// // WIP It streams a response, always starting with a metadata object, following by chunked payloads for the asset.
 func (c *Connector) Asset(ctx context.Context, asset *v2.AssetRef) (string, io.ReadCloser, error) {
 	return "", nil, nil
 }
@@ -37,8 +38,6 @@ func (c *Connector) Metadata(ctx context.Context) (*v2.ConnectorMetadata, error)
 		Description: "The template implementation of a baton connector",
 	}, nil
 }
-
-//NOTE: validate doesn't get called when running grant and revoke, which is why they are not working
 
 // Validate is called to ensure that the connector is properly configured. It should exercise any API credentials
 // to be sure that they are valid.

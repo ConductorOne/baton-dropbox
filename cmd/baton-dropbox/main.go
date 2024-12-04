@@ -10,7 +10,6 @@ import (
 	"github.com/conductorone/baton-dropbox/pkg/connector/dropbox"
 	"github.com/conductorone/baton-sdk/pkg/config"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
-	"github.com/conductorone/baton-sdk/pkg/field"
 	"github.com/conductorone/baton-sdk/pkg/types"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/spf13/viper"
@@ -24,48 +23,14 @@ var version = "dev"
 func main() {
 	ctx := context.Background()
 
-	// viper, cmd, err := config.DefineConfiguration(
-	v, cmd, err := config.DefineConfiguration(
+	_, cmd, err := config.DefineConfiguration(
 		ctx,
 		"baton-dropbox",
 		getConnector,
-		field.NewConfiguration(ConfigurationFields),
+		ConfigurationSchema,
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(1)
-	}
-
-	configureArg := v.GetBool(ConfigureField.FieldName)
-	if configureArg {
-		appKey, appSecret := v.GetString(AppKey.FieldName), v.GetString(AppSecret.FieldName)
-
-		client, err := dropbox.NewClient(ctx, dropbox.Config{
-			AppKey:    appKey,
-			AppSecret: appSecret,
-		})
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
-		}
-		code, err := client.Authorize(ctx, appKey, appSecret)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
-		}
-
-		_, _, refreshToken, err := client.RequestAccessToken(ctx, code)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
-		}
-		log.Println("refresh token: ", refreshToken)
-		os.Exit(0)
-	}
-
-	refreshTokenArg := v.GetString(RefreshTokenField.FieldName)
-	if refreshTokenArg == "" {
-		fmt.Fprintln(os.Stderr, "refresh-token is required")
 		os.Exit(1)
 	}
 
@@ -79,8 +44,21 @@ func main() {
 }
 
 func getConnector(ctx context.Context, v *viper.Viper) (types.ConnectorServer, error) {
-	l := ctxzap.Extract(ctx)
+	configureArg := v.GetBool(ConfigureField.FieldName)
+	if configureArg {
+		if err := configure(ctx, v); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		} else {
+			os.Exit(0)
+		}
+	}
 
+	if v.GetString(RefreshTokenField.FieldName) == "" {
+		return nil, fmt.Errorf("refresh token is required, get it by running the connector with the --configure flag")
+	}
+
+	l := ctxzap.Extract(ctx)
 	cb, err := connector.New(
 		ctx,
 		v.GetString(AppKey.FieldName),
@@ -98,4 +76,34 @@ func getConnector(ctx context.Context, v *viper.Viper) (types.ConnectorServer, e
 		return nil, err
 	}
 	return connector, nil
+}
+
+func configure(ctx context.Context, v *viper.Viper) error {
+	appKey, appSecret := v.GetString("app-key"), v.GetString("app-secret")
+
+	if appKey == "" {
+		return fmt.Errorf("app key is required")
+	}
+	if appSecret == "" {
+		return fmt.Errorf("app secret is required")
+	}
+
+	client, err := dropbox.NewClient(ctx, dropbox.Config{
+		AppKey:    appKey,
+		AppSecret: appSecret,
+	})
+	if err != nil {
+		return err
+	}
+	code, err := client.Authorize(ctx, appKey, appSecret)
+	if err != nil {
+		return err
+	}
+
+	_, _, refreshToken, err := client.RequestAccessToken(ctx, code)
+	if err != nil {
+		return err
+	}
+	log.Printf("\nrefresh token: %s\n", refreshToken)
+	return nil
 }

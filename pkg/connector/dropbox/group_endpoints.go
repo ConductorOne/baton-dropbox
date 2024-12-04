@@ -11,7 +11,7 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/uhttp"
 )
 
-const defaultLimit = 100
+const groupDefaultLimit = 100
 
 type ListGroupsBody struct {
 	Limit int `json:"limit"`
@@ -19,7 +19,7 @@ type ListGroupsBody struct {
 
 func DefaultListGroupsBody() ListGroupsBody {
 	return ListGroupsBody{
-		Limit: defaultLimit,
+		Limit: groupDefaultLimit,
 	}
 }
 
@@ -113,7 +113,7 @@ func DefaultGroupMembersBody() ListGroupMembersBody {
 		Group: GroupIdTag{
 			Tag: "group_id",
 		},
-		Limit: defaultLimit,
+		Limit: groupDefaultLimit,
 	}
 }
 

@@ -20,10 +20,11 @@ type userBuilder struct {
 
 func userResource(user dropbox.Profile, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
 	profile := map[string]interface{}{
-		"id":         user.AccountID,
-		"email":      user.Email,
-		"first_name": user.Name.GivenName,
-		"last_name":  user.Name.Surname,
+		"id":             user.AccountID,
+		"email":          user.Email,
+		"first_name":     user.Name.GivenName,
+		"last_name":      user.Name.Surname,
+		"team_member_id": user.TeamMemberID,
 	}
 
 	userTraitOptions := []resourceSdk.UserTraitOption{

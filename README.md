@@ -8,6 +8,11 @@ Check out [Baton](https://github.com/conductorone/baton) to learn more the proje
 
 # Getting Started
 
+## Prerequisites
+
+1. Create a Dropbox app. You can follow [this Dropbox quickstart guide](https://www.dropbox.com/developers/reference/getting-started) and click on the "App Console" link.
+2. You need to set the "Team Scopes" in the Permissions tab.
+
 ## brew
 
 ```
@@ -38,6 +43,8 @@ baton resources
 
 `baton-dropbox` will pull down information about the following resources:
 - Users
+- Roles
+- Groups
 
 # Contributing, Support and Issues
 
@@ -65,6 +72,10 @@ Available Commands:
 Flags:
       --client-id string             The client ID used to authenticate with ConductorOne ($BATON_CLIENT_ID)
       --client-secret string         The client secret used to authenticate with ConductorOne ($BATON_CLIENT_SECRET)
+      --configure bool               Get the refresh token the first time you run the connector.
+      --refresh-token string         The refresh token used to get an access token for authentication with Dropbox ($BATON_REFRESH_TOKEN)
+      --app-key string               The app key used to authenticate with Dropbox ($BATON_APP_KEY)
+      --app-secret string            The app secret used to authenticate with Dropbox ($BATON_APP_SECRET)
   -f, --file string                  The path to the c1z file to sync with ($BATON_FILE) (default "sync.c1z")
   -h, --help                         help for baton-dropbox
       --log-format string            The output format for logs: json, console ($BATON_LOG_FORMAT) (default "json")

@@ -95,8 +95,8 @@ func (o *groupBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ 
 			resource,
 			groupOwner,
 			entitlement.WithGrantableTo(userResourceType),
-			entitlement.WithDescription(fmt.Sprintf("Owner of %s Dropbox group", resource.DisplayName)),
-			entitlement.WithDisplayName(fmt.Sprintf("%s Group %s", resource.DisplayName, groupOwner)),
+			entitlement.WithDescription(fmt.Sprintf("Owner of %s dropbox group", resource.DisplayName)),
+			entitlement.WithDisplayName(fmt.Sprintf("%s group %s", resource.DisplayName, groupOwner)),
 		),
 	}, "", nil, nil
 }
