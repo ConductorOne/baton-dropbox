@@ -50,6 +50,7 @@ func (c *Client) ListGroups(ctx context.Context, limit int) (*ListGroupsPayload,
 		uhttp.WithRatelimitData(&ratelimitData),
 	)
 	if err != nil {
+		logBody(ctx, res.Body)
 		return nil, &ratelimitData, err
 	}
 
@@ -86,6 +87,7 @@ func (c *Client) ListGroupsContinue(ctx context.Context, cursor string) (*ListGr
 		uhttp.WithRatelimitData(&ratelimitData),
 	)
 	if err != nil {
+		logBody(ctx, res.Body)
 		return nil, &ratelimitData, err
 	}
 
@@ -148,6 +150,7 @@ func (c *Client) ListGroupMembers(ctx context.Context, groupId string, limit int
 	)
 
 	if err != nil {
+		logBody(ctx, res.Body)
 		return nil, &ratelimitData, err
 	}
 
@@ -185,6 +188,7 @@ func (c *Client) ListGroupMembersContinue(ctx context.Context, cursor string) (*
 	)
 
 	if err != nil {
+		logBody(ctx, res.Body)
 		return nil, &ratelimitData, err
 	}
 

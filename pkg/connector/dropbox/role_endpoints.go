@@ -39,6 +39,7 @@ func (c *Client) AddRoleToUser(ctx context.Context, roleId, email string) (*v2.R
 	)
 
 	if err != nil {
+		logBody(ctx, res.Body)
 		return &ratelimitData, err
 	}
 
