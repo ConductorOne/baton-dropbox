@@ -18,8 +18,6 @@ import (
 
 var version = "dev"
 
-// var configure2 = flag.Bool("configure2", false, "configure the connector")
-
 func main() {
 	ctx := context.Background()
 

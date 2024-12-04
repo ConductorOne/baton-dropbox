@@ -26,7 +26,6 @@ func (c *Client) RequestAccessTokenUsingRefreshToken(ctx context.Context) (strin
 	if c.RefreshToken == "" {
 		return "", nil, fmt.Errorf("dropbox-connector: refresh token is empty, run with --configure flag to get a refresh token")
 	}
-	// get an access token using the refresh token
 	grantType := "refresh_token"
 
 	form := url.Values{}
@@ -77,7 +76,7 @@ func (c *Client) Authorize(ctx context.Context, appKey, appSecret string) (strin
 	scanner := bufio.NewScanner(os.Stdin)
 	if scanner.Scan() {
 		code = scanner.Text()
-		code = strings.TrimSpace(code) // Remove any leading or trailing whitespace
+		code = strings.TrimSpace(code)
 	}
 
 	if err := scanner.Err(); err != nil {

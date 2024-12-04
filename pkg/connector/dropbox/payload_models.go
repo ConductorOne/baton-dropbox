@@ -81,42 +81,44 @@ type MembersProfile struct {
 	TeamMemberID string `json:"team_member_id"`
 }
 
-type ListFoldersPayload struct {
-	Cursor  string   `json:"cursor"`
-	Entries []Folder `json:"entries"`
-}
+// folders
 
-type Folder struct {
-	SharedFolderId string `json:"shared_folder_id"`
-	Name           string `json:"name"`
-}
-
-type ListFolderMembersPayload struct {
-	Cursor string            `json:"cursor"`
-	Groups []ListFolderGroup `json:"groups"`
-	Users  []ListFolderUser  `json:"users"`
-}
-
-type ListFolderGroup struct {
-	AccessType  Tag                   `json:"access_type"`
-	Permissions []any                 `json:"permissions"`
-	Group       ListFolderNestedGroup `json:"group"`
-}
-
-type ListFolderNestedGroup struct {
-	GroupID   string `json:"group_id"`
-	GroupName string `json:"group_name"`
-}
-
-type ListFolderUser struct {
-	AccessType  Tag                  `json:"access_type"`
-	Permissions []any                `json:"permissions"`
-	User        ListFolderNestedUser `json:"user"`
-}
-
-type ListFolderNestedUser struct {
-	AccountID    string `json:"account_id"`
-	DisplayName  string `json:"display_name"`
-	Email        string `json:"email"`
-	TeamMemberID string `json:"team_member_id"`
-}
+// type ListFoldersPayload struct {
+// 	Cursor  string   `json:"cursor"`
+// 	Entries []Folder `json:"entries"`
+// }
+//
+// type Folder struct {
+// 	SharedFolderId string `json:"shared_folder_id"`
+// 	Name           string `json:"name"`
+// }
+//
+// type ListFolderMembersPayload struct {
+// 	Cursor string            `json:"cursor"`
+// 	Groups []ListFolderGroup `json:"groups"`
+// 	Users  []ListFolderUser  `json:"users"`
+// }
+//
+// type ListFolderGroup struct {
+// 	AccessType  Tag                   `json:"access_type"`
+// 	Permissions []any                 `json:"permissions"`
+// 	Group       ListFolderNestedGroup `json:"group"`
+// }
+//
+// type ListFolderNestedGroup struct {
+// 	GroupID   string `json:"group_id"`
+// 	GroupName string `json:"group_name"`
+// }
+//
+// type ListFolderUser struct {
+// 	AccessType  Tag                  `json:"access_type"`
+// 	Permissions []any                `json:"permissions"`
+// 	User        ListFolderNestedUser `json:"user"`
+// }
+//
+// type ListFolderNestedUser struct {
+// 	AccountID    string `json:"account_id"`
+// 	DisplayName  string `json:"display_name"`
+// 	Email        string `json:"email"`
+// 	TeamMemberID string `json:"team_member_id"`
+// }

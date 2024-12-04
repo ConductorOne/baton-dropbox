@@ -6,17 +6,8 @@ const (
 	TokenURL = BaseURL + "/oauth2/token"
 )
 
-// user endpoints.
-const (
-	ListFoldersURL               = BaseURL + "/2/files/list_folder"
-	ListFoldersContinueURL       = BaseURL + "/2/files/list_folder/continue"
-	AddUserToFolderURL           = BaseURL + "/2/sharing/add_folder_member"
-	RemoveUserFromFolderURL      = BaseURL + "/2/sharing/remove_folder_member"
-	ListFolderMembersURL         = BaseURL + "/2/sharing/list_folder_members"
-	ListFolderMembersContinueURL = BaseURL + "/2/sharing/list_folder_members/continue"
-)
+// https://www.dropbox.com/developers/documentation/http/documentation
 
-// enterprise endpoints.
 const (
 	// users.
 	ListUsersURL         = BaseURL + "/2/team/members/list_v2"
@@ -26,7 +17,6 @@ const (
 	SetRoleURL = BaseURL + "/2/team/members/set_admin_permissions_v2"
 
 	// groups.
-
 	ListGroupsURL               = BaseURL + "/2/team/groups/list"
 	ListGroupsContinueURL       = BaseURL + "/2/team/groups/list/continue"
 	ListGroupMembersURL         = BaseURL + "/2/team/groups/members/list"
@@ -34,3 +24,13 @@ const (
 	AddUserToGroupURL           = BaseURL + "/2/team/groups/members/add"
 	RemoveUserFromGroupURL      = BaseURL + "/2/team/groups/members/remove"
 )
+
+// const (
+// // folders.
+// 	ListFoldersURL               = BaseURL + "/2/files/list_folder"
+// 	ListFoldersContinueURL       = BaseURL + "/2/files/list_folder/continue"
+// 	AddUserToFolderURL           = BaseURL + "/2/sharing/add_folder_member"
+// 	RemoveUserFromFolderURL      = BaseURL + "/2/sharing/remove_folder_member"
+// 	ListFolderMembersURL         = BaseURL + "/2/sharing/list_folder_members"
+// 	ListFolderMembersContinueURL = BaseURL + "/2/sharing/list_folder_members/continue"
+// )

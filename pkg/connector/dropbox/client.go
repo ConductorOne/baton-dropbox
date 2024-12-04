@@ -8,7 +8,6 @@ import (
 )
 
 type Client struct {
-	// http.Client
 	uhttp.BaseHttpClient
 	Config
 	AccessToken string

@@ -26,7 +26,7 @@ func (c *Connector) ResourceSyncers(ctx context.Context) []connectorbuilder.Reso
 }
 
 // Asset takes an input AssetRef and attempts to fetch it using the connector's authenticated http client
-// // WIP It streams a response, always starting with a metadata object, following by chunked payloads for the asset.
+// It streams a response, always starting with a metadata object, following by chunked payloads for the asset.
 func (c *Connector) Asset(ctx context.Context, asset *v2.AssetRef) (string, io.ReadCloser, error) {
 	return "", nil, nil
 }
