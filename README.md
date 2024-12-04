@@ -10,8 +10,11 @@ Check out [Baton](https://github.com/conductorone/baton) to learn more the proje
 
 ## Prerequisites
 
+You need to pass an application key, secret, and refresh token to the connector. You can get these by following these steps:
 1. Create a Dropbox app. You can follow [this Dropbox quickstart guide](https://www.dropbox.com/developers/reference/getting-started) and click on the "App Console" link.
 2. You need to set the "Team Scopes" in the Permissions tab.
+3. Copy the application's key and secret.
+4. Get a refresh token, you can get one by using the --configure flag.
 
 ## brew
 
