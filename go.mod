@@ -3,7 +3,7 @@ module github.com/conductorone/baton-dropbox
 go 1.22.8
 
 require (
-	github.com/conductorone/baton-sdk v0.2.45
+	github.com/conductorone/baton-sdk v0.2.48
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/spf13/viper v1.19.0
 	go.uber.org/zap v1.27.0
