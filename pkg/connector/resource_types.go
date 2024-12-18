@@ -22,9 +22,3 @@ var roleResourceType = &v2.ResourceType{
 	DisplayName: "Role",
 	Traits:      []v2.ResourceType_Trait{v2.ResourceType_TRAIT_ROLE},
 }
-
-// var folderResourceType = &v2.ResourceType{
-// 	Id:          "folder",
-// 	DisplayName: "Folder",
-// 	Traits:      []v2.ResourceType_Trait{v2.ResourceType_TRAIT_GROUP},
-// }

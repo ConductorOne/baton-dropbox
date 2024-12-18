@@ -24,13 +24,3 @@ const (
 	AddUserToGroupURL           = BaseURL + "/2/team/groups/members/add"
 	RemoveUserFromGroupURL      = BaseURL + "/2/team/groups/members/remove"
 )
-
-// const (
-// // folders.
-// 	ListFoldersURL               = BaseURL + "/2/files/list_folder"
-// 	ListFoldersContinueURL       = BaseURL + "/2/files/list_folder/continue"
-// 	AddUserToFolderURL           = BaseURL + "/2/sharing/add_folder_member"
-// 	RemoveUserFromFolderURL      = BaseURL + "/2/sharing/remove_folder_member"
-// 	ListFolderMembersURL         = BaseURL + "/2/sharing/list_folder_members"
-// 	ListFolderMembersContinueURL = BaseURL + "/2/sharing/list_folder_members/continue"
-// )
