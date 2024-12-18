@@ -177,12 +177,12 @@ func (r *roleBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations.
 	principal := grant.Principal
 
 	if principal.Id.ResourceType != userResourceType.Id {
-		return nil, fmt.Errorf("baton-auth0: only users can have role membership revoked")
+		return nil, fmt.Errorf("baton-dropbox: only users can have role membership revoked")
 	}
 
 	email, err := getEmail(principal)
 	if err != nil {
-		return nil, fmt.Errorf("baton-auth0: failed to get email: %s", err.Error())
+		return nil, fmt.Errorf("baton-dropbox: failed to get email: %s", err.Error())
 	}
 
 	var outputAnnotations annotations.Annotations
