@@ -5,12 +5,13 @@ import (
 
 	"github.com/conductorone/baton-sdk/pkg/uhttp"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
+	"golang.org/x/oauth2"
 )
 
 type Client struct {
 	uhttp.BaseHttpClient
 	Config
-	AccessToken string
+	TokenSource oauth2.TokenSource
 }
 
 type Config struct {

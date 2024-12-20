@@ -59,9 +59,12 @@ func getConnector(ctx context.Context, v *viper.Viper) (types.ConnectorServer, e
 	l := ctxzap.Extract(ctx)
 	cb, err := connector.New(
 		ctx,
-		v.GetString(AppKey.FieldName),
-		v.GetString(AppSecret.FieldName),
-		v.GetString(RefreshTokenField.FieldName),
+		connector.WithRefreshToken(
+			ctx,
+			v.GetString(AppKey.FieldName),
+			v.GetString(AppSecret.FieldName),
+			v.GetString(RefreshTokenField.FieldName),
+		),
 	)
 
 	if err != nil {

@@ -25,13 +25,18 @@ func DefaultListGroupsBody() ListGroupsBody {
 
 // docs: https://www.dropbox.com/developers/documentation/http/teams#team-groups-list
 func (c *Client) ListGroups(ctx context.Context, limit int) (*ListGroupsPayload, *v2.RateLimitDescription, error) {
+	token, err := c.TokenSource.Token()
+	if err != nil {
+		return nil, nil, err
+	}
+
 	body := DefaultListGroupsBody()
 	if limit != 0 {
 		body.Limit = limit
 	}
 
 	reader := new(bytes.Buffer)
-	err := json.NewEncoder(reader).Encode(body)
+	err = json.NewEncoder(reader).Encode(body)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -40,7 +45,7 @@ func (c *Client) ListGroups(ctx context.Context, limit int) (*ListGroupsPayload,
 	if err != nil {
 		return nil, nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.AccessToken))
 	req.Header.Set("Content-Type", "application/json")
 
 	var target ListGroupsPayload
@@ -64,12 +69,17 @@ func (c *Client) ListGroups(ctx context.Context, limit int) (*ListGroupsPayload,
 }
 
 func (c *Client) ListGroupsContinue(ctx context.Context, cursor string) (*ListGroupsPayload, *v2.RateLimitDescription, error) {
+	token, err := c.TokenSource.Token()
+	if err != nil {
+		return nil, nil, err
+	}
+
 	body := struct {
 		Cursor string `json:"cursor"`
 	}{Cursor: cursor}
 
 	reader := new(bytes.Buffer)
-	err := json.NewEncoder(reader).Encode(body)
+	err = json.NewEncoder(reader).Encode(body)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -77,7 +87,7 @@ func (c *Client) ListGroupsContinue(ctx context.Context, cursor string) (*ListGr
 	if err != nil {
 		return nil, nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.AccessToken))
 	req.Header.Set("Content-Type", "application/json")
 
 	var target ListGroupsPayload
@@ -120,6 +130,11 @@ func DefaultGroupMembersBody() ListGroupMembersBody {
 }
 
 func (c *Client) ListGroupMembers(ctx context.Context, groupId string, limit int) (*ListGroupMembersPayload, *v2.RateLimitDescription, error) {
+	token, err := c.TokenSource.Token()
+	if err != nil {
+		return nil, nil, err
+	}
+
 	body := DefaultGroupMembersBody()
 	if groupId == "" {
 		return nil, nil, fmt.Errorf("groupId is required")
@@ -131,7 +146,7 @@ func (c *Client) ListGroupMembers(ctx context.Context, groupId string, limit int
 	}
 
 	reader := new(bytes.Buffer)
-	err := json.NewEncoder(reader).Encode(body)
+	err = json.NewEncoder(reader).Encode(body)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -139,7 +154,7 @@ func (c *Client) ListGroupMembers(ctx context.Context, groupId string, limit int
 	if err != nil {
 		return nil, nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.AccessToken))
 	req.Header.Set("Content-Type", "application/json")
 
 	var target ListGroupMembersPayload
@@ -164,12 +179,17 @@ func (c *Client) ListGroupMembers(ctx context.Context, groupId string, limit int
 }
 
 func (c *Client) ListGroupMembersContinue(ctx context.Context, cursor string) (*ListGroupMembersPayload, *v2.RateLimitDescription, error) {
+	token, err := c.TokenSource.Token()
+	if err != nil {
+		return nil, nil, err
+	}
+
 	body := struct {
 		Cursor string `json:"cursor"`
 	}{Cursor: cursor}
 
 	reader := new(bytes.Buffer)
-	err := json.NewEncoder(reader).Encode(body)
+	err = json.NewEncoder(reader).Encode(body)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -177,7 +197,7 @@ func (c *Client) ListGroupMembersContinue(ctx context.Context, cursor string) (*
 	if err != nil {
 		return nil, nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.AccessToken))
 	req.Header.Set("Content-Type", "application/json")
 
 	var target ListGroupMembersPayload
@@ -213,6 +233,11 @@ type EmailTag struct {
 }
 
 func (c *Client) RemoveUserFromGroup(ctx context.Context, groupId, email string) (*v2.RateLimitDescription, error) {
+	token, err := c.TokenSource.Token()
+	if err != nil {
+		return nil, err
+	}
+
 	body := RemoveUserFromGroupBody{
 		Group: GroupIdTag{
 			GroupID: groupId,
@@ -227,7 +252,7 @@ func (c *Client) RemoveUserFromGroup(ctx context.Context, groupId, email string)
 	}
 
 	buffer := new(bytes.Buffer)
-	err := json.NewEncoder(buffer).Encode(body)
+	err = json.NewEncoder(buffer).Encode(body)
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +260,7 @@ func (c *Client) RemoveUserFromGroup(ctx context.Context, groupId, email string)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.AccessToken))
 	req.Header.Set("Content-Type", "application/json")
 
 	var ratelimitData v2.RateLimitDescription
@@ -301,6 +326,11 @@ type AddToGroupMembers struct {
 }
 
 func (c *Client) AddUserToGroup(ctx context.Context, groupId, email, accessType string) (*v2.RateLimitDescription, error) {
+	token, err := c.TokenSource.Token()
+	if err != nil {
+		return nil, err
+	}
+
 	body := AddUserToGroupBody{
 		Group: GroupIdTag{
 			Tag:     "group_id",
@@ -318,7 +348,7 @@ func (c *Client) AddUserToGroup(ctx context.Context, groupId, email, accessType 
 	}
 
 	buf := new(bytes.Buffer)
-	err := json.NewEncoder(buf).Encode(body)
+	err = json.NewEncoder(buf).Encode(body)
 	if err != nil {
 		return nil, err
 	}
@@ -327,7 +357,7 @@ func (c *Client) AddUserToGroup(ctx context.Context, groupId, email, accessType 
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.AccessToken))
 	req.Header.Set("Content-Type", "application/json")
 
 	var ratelimitData v2.RateLimitDescription

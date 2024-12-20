@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
@@ -25,6 +26,11 @@ func DefaultListUserBody() ListUserBody {
 }
 
 func (c *Client) ListUsers(ctx context.Context, limit int) (*ListUsersPayload, *v2.RateLimitDescription, error) {
+	token, err := c.TokenSource.Token()
+	if err != nil {
+		return nil, nil, err
+	}
+
 	body := DefaultListUserBody()
 	if limit != 0 {
 		body.Limit = limit
@@ -32,7 +38,7 @@ func (c *Client) ListUsers(ctx context.Context, limit int) (*ListUsersPayload, *
 	body.IncludeRemoved = true
 
 	reader := new(bytes.Buffer)
-	err := json.NewEncoder(reader).Encode(body)
+	err = json.NewEncoder(reader).Encode(body)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -40,7 +46,7 @@ func (c *Client) ListUsers(ctx context.Context, limit int) (*ListUsersPayload, *
 	if err != nil {
 		return nil, nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.AccessToken))
 	req.Header.Set("Content-Type", "application/json")
 
 	var target ListUsersPayload
@@ -64,12 +70,17 @@ func (c *Client) ListUsers(ctx context.Context, limit int) (*ListUsersPayload, *
 }
 
 func (c *Client) ListUsersContinue(ctx context.Context, cursor string) (*ListUsersPayload, *v2.RateLimitDescription, error) {
+	token, err := c.TokenSource.Token()
+	if err != nil {
+		return nil, nil, err
+	}
+
 	body := struct {
 		Cursor string `json:"cursor"`
 	}{Cursor: cursor}
 
 	reader := new(bytes.Buffer)
-	err := json.NewEncoder(reader).Encode(body)
+	err = json.NewEncoder(reader).Encode(body)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -78,7 +89,7 @@ func (c *Client) ListUsersContinue(ctx context.Context, cursor string) (*ListUse
 	if err != nil {
 		return nil, nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.AccessToken))
 	req.Header.Set("Content-Type", "application/json")
 
 	var target ListUsersPayload
