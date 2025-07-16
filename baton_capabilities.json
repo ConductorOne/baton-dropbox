@@ -3,6 +3,32 @@
   "resourceTypeCapabilities":  [
     {
       "resourceType":  {
+        "id":  "group",
+        "displayName":  "Group",
+        "traits":  [
+          "TRAIT_GROUP"
+        ]
+      },
+      "capabilities":  [
+        "CAPABILITY_SYNC",
+        "CAPABILITY_PROVISION"
+      ]
+    },
+    {
+      "resourceType":  {
+        "id":  "role",
+        "displayName":  "Role",
+        "traits":  [
+          "TRAIT_ROLE"
+        ]
+      },
+      "capabilities":  [
+        "CAPABILITY_SYNC",
+        "CAPABILITY_PROVISION"
+      ]
+    },
+    {
+      "resourceType":  {
         "id":  "user",
         "displayName":  "User",
         "traits":  [
@@ -15,6 +41,8 @@
     }
   ],
   "connectorCapabilities":  [
+    "CAPABILITY_PROVISION",
     "CAPABILITY_SYNC"
-  ]
+  ],
+  "credentialDetails":  {}
 }
