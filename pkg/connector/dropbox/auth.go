@@ -49,6 +49,9 @@ func (c *Client) RequestAccessTokenUsingRefreshToken(ctx context.Context) (strin
 		uhttp.WithJSONResponse(&target),
 	)
 	if err != nil {
+		if res != nil && res.Body != nil {
+			logBody(ctx, res.Body)
+		}
 		return "", nil, err
 	}
 
@@ -111,6 +114,9 @@ func (c *Client) RequestAccessToken(ctx context.Context, code string) (string, *
 		uhttp.WithJSONResponse(&target),
 	)
 	if err != nil {
+		if res != nil && res.Body != nil {
+			logBody(ctx, res.Body)
+		}
 		return "", nil, "", err
 	}
 

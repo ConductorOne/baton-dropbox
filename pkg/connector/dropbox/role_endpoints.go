@@ -45,7 +45,9 @@ func (c *Client) AddRoleToUser(ctx context.Context, roleId, email string) (*v2.R
 	)
 
 	if err != nil {
-		logBody(ctx, res.Body)
+		if res != nil && res.Body != nil {
+			logBody(ctx, res.Body)
+		}
 		return &ratelimitData, err
 	}
 
@@ -90,7 +92,9 @@ func (c *Client) ClearRoles(ctx context.Context, email string) (*v2.RateLimitDes
 	)
 
 	if err != nil {
-		logBody(ctx, res.Body)
+		if res != nil && res.Body != nil {
+			logBody(ctx, res.Body)
+		}
 		return &ratelimitData, err
 	}
 

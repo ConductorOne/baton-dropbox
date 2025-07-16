@@ -56,7 +56,9 @@ func (c *Client) ListUsers(ctx context.Context, limit int) (*ListUsersPayload, *
 		uhttp.WithRatelimitData(&rateLimitData),
 	)
 	if err != nil {
-		logBody(ctx, res.Body)
+		if res != nil && res.Body != nil {
+			logBody(ctx, res.Body)
+		}
 		return nil, nil, err
 	}
 
@@ -99,7 +101,9 @@ func (c *Client) ListUsersContinue(ctx context.Context, cursor string) (*ListUse
 		uhttp.WithRatelimitData(&rateLimitData),
 	)
 	if err != nil {
-		logBody(ctx, res.Body)
+		if res != nil && res.Body != nil {
+			logBody(ctx, res.Body)
+		}
 		return nil, nil, err
 	}
 
