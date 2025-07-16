@@ -54,7 +54,7 @@ func (c *Client) RequestAccessTokenUsingRefreshToken(ctx context.Context) (strin
 
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		logBody(ctx, res.Body)
+		logBody(ctx, res)
 		return "", nil, fmt.Errorf("error getting access token: %s", res.Status)
 	}
 
@@ -116,7 +116,7 @@ func (c *Client) RequestAccessToken(ctx context.Context, code string) (string, *
 
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		logBody(ctx, res.Body)
+		logBody(ctx, res)
 		return "", nil, "", fmt.Errorf("error getting access token: %s", res.Status)
 	}
 

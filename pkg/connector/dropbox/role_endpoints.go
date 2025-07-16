@@ -45,13 +45,13 @@ func (c *Client) AddRoleToUser(ctx context.Context, roleId, email string) (*v2.R
 	)
 
 	if err != nil {
-		logBody(ctx, res.Body)
+		logBody(ctx, res)
 		return &ratelimitData, err
 	}
 
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		logBody(ctx, res.Body)
+		logBody(ctx, res)
 		return &ratelimitData, err
 	}
 
@@ -90,13 +90,13 @@ func (c *Client) ClearRoles(ctx context.Context, email string) (*v2.RateLimitDes
 	)
 
 	if err != nil {
-		logBody(ctx, res.Body)
+		logBody(ctx, res)
 		return &ratelimitData, err
 	}
 
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		logBody(ctx, res.Body)
+		logBody(ctx, res)
 		return &ratelimitData, err
 	}
 

@@ -55,13 +55,13 @@ func (c *Client) ListGroups(ctx context.Context, limit int) (*ListGroupsPayload,
 		uhttp.WithRatelimitData(&ratelimitData),
 	)
 	if err != nil {
-		logBody(ctx, res.Body)
+		logBody(ctx, res)
 		return nil, &ratelimitData, err
 	}
 
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		logBody(ctx, res.Body)
+		logBody(ctx, res)
 		return nil, &ratelimitData, err
 	}
 
@@ -97,13 +97,13 @@ func (c *Client) ListGroupsContinue(ctx context.Context, cursor string) (*ListGr
 		uhttp.WithRatelimitData(&ratelimitData),
 	)
 	if err != nil {
-		logBody(ctx, res.Body)
+		logBody(ctx, res)
 		return nil, &ratelimitData, err
 	}
 
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		logBody(ctx, res.Body)
+		logBody(ctx, res)
 		return nil, &ratelimitData, err
 	}
 
@@ -165,13 +165,13 @@ func (c *Client) ListGroupMembers(ctx context.Context, groupId string, limit int
 	)
 
 	if err != nil {
-		logBody(ctx, res.Body)
+		logBody(ctx, res)
 		return nil, &ratelimitData, err
 	}
 
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		logBody(ctx, res.Body)
+		logBody(ctx, res)
 		return nil, &ratelimitData, err
 	}
 
@@ -208,13 +208,13 @@ func (c *Client) ListGroupMembersContinue(ctx context.Context, cursor string) (*
 	)
 
 	if err != nil {
-		logBody(ctx, res.Body)
+		logBody(ctx, res)
 		return nil, &ratelimitData, err
 	}
 
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		logBody(ctx, res.Body)
+		logBody(ctx, res)
 		return nil, &ratelimitData, err
 	}
 
@@ -269,13 +269,13 @@ func (c *Client) RemoveUserFromGroup(ctx context.Context, groupId, email string)
 	)
 
 	if err != nil {
-		logBody(ctx, res.Body)
+		logBody(ctx, res)
 		return &ratelimitData, err
 	}
 
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		logBody(ctx, res.Body)
+		logBody(ctx, res)
 		return &ratelimitData, err
 	}
 
@@ -365,13 +365,13 @@ func (c *Client) AddUserToGroup(ctx context.Context, groupId, email, accessType 
 		uhttp.WithRatelimitData(&ratelimitData),
 	)
 	if err != nil {
-		logBody(ctx, res.Body)
+		logBody(ctx, res)
 		return &ratelimitData, err
 	}
 
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		logBody(ctx, res.Body)
+		logBody(ctx, res)
 		return &ratelimitData, err
 	}
 
