@@ -51,7 +51,7 @@ func (o *groupBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId
 	var payload *dropbox.ListGroupsPayload
 	var rateLimitData *v2.RateLimitDescription
 	var err error
-	var limit int = 100
+	var limit = 100
 
 	if pToken.Token == "" {
 		payload, rateLimitData, err = o.ListGroups(ctx, limit)
