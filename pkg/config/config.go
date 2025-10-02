@@ -40,5 +40,7 @@ var (
 		RefreshTokenField,
 		ConfigureField,
 	}
-	ConfigurationSchema = field.NewConfiguration(ConfigurationFields)
 )
+
+//go:generate go run ./gen
+var ConfigurationSchema = field.NewConfiguration(ConfigurationFields)
