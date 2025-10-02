@@ -10,6 +10,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"strings"
 	"syscall"
 	"time"
 
@@ -32,8 +34,6 @@ const (
 	acceptHeader              = "Accept"
 	authorizationHeader       = "Authorization"
 )
-
-const maxBodySize = 4096
 
 type WrapperResponse struct {
 	Header     http.Header
@@ -134,14 +134,14 @@ func NewBaseHttpClientWithContext(ctx context.Context, httpClient *http.Client, 
 // WithJSONResponse is a wrapper that marshals the returned response body into
 // the provided shape. If the API should return an empty JSON body (i.e. HTTP
 // status code 204 No Content), then pass a `nil` to `response`.
-func WithJSONResponse(response interface{}) DoOption {
+func WithJSONResponse(response any) DoOption {
 	return func(resp *WrapperResponse) error {
 		contentHeader := resp.Header.Get(ContentType)
 
 		if !IsJSONContentType(contentHeader) {
 			if len(resp.Body) != 0 {
-				// we want to see the body regardless
-				return fmt.Errorf("unexpected content type for JSON response: %s. status code: %d. body: «%s»", contentHeader, resp.StatusCode, logBody(resp.Body, maxBodySize))
+				// to print the response, set the envvar BATON_DEBUG_PRINT_RESPONSE_BODY as non-empty, instead
+				return fmt.Errorf("unexpected content type for JSON response: %s. status code: %d", contentHeader, resp.StatusCode)
 			}
 			return fmt.Errorf("unexpected content type for JSON response: %s. status code: %d", contentHeader, resp.StatusCode)
 		}
@@ -150,31 +150,56 @@ func WithJSONResponse(response interface{}) DoOption {
 		}
 		err := json.Unmarshal(resp.Body, response)
 		if err != nil {
-			return fmt.Errorf("failed to unmarshal json response: %w. status code: %d. body %v", err, resp.StatusCode, logBody(resp.Body, maxBodySize))
+			// to print the response, set the envvar BATON_DEBUG_PRINT_RESPONSE_BODY as non-empty, instead
+			return fmt.Errorf("failed to unmarshal json response: %w. status code: %d", err, resp.StatusCode)
 		}
 		return nil
 	}
 }
 
 // Ignore content type header and always try to parse the response as JSON.
-func WithAlwaysJSONResponse(response interface{}) DoOption {
+func WithAlwaysJSONResponse(response any) DoOption {
 	return func(resp *WrapperResponse) error {
 		if response == nil && len(resp.Body) == 0 {
 			return nil
 		}
 		err := json.Unmarshal(resp.Body, response)
 		if err != nil {
-			return fmt.Errorf("failed to unmarshal json response: %w. status code: %d. body %v", err, resp.StatusCode, logBody(resp.Body, maxBodySize))
+			// to print the response, set the envvar BATON_DEBUG_PRINT_RESPONSE_BODY as non-empty, instead
+			return fmt.Errorf("failed to unmarshal json response: %w. status code: %d", err, resp.StatusCode)
 		}
 		return nil
 	}
 }
 
-func logBody(body []byte, size int) string {
-	if len(body) > size {
-		return string(body[:size]) + " ..."
+func WithXMLResponse(response any) DoOption {
+	return func(resp *WrapperResponse) error {
+		if !IsXMLContentType(resp.Header.Get(ContentType)) {
+			return fmt.Errorf("unexpected content type for xml response: %s", resp.Header.Get(ContentType))
+		}
+		if response == nil && len(resp.Body) == 0 {
+			return nil
+		}
+		err := xml.Unmarshal(resp.Body, response)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal xml response: %w. status code: %d", err, resp.StatusCode)
+		}
+		return nil
 	}
-	return string(body)
+}
+
+// Ignore content type header and always try to parse the response as XML.
+func WithAlwaysXMLResponse(response any) DoOption {
+	return func(resp *WrapperResponse) error {
+		if response == nil && len(resp.Body) == 0 {
+			return nil
+		}
+		err := xml.Unmarshal(resp.Body, response)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal xml response: %w. status code: %d", err, resp.StatusCode)
+		}
+		return nil
+	}
 }
 
 type ErrorResponse interface {
@@ -190,12 +215,14 @@ func WithErrorResponse(resource ErrorResponse) DoOption {
 		contentHeader := resp.Header.Get(ContentType)
 
 		if !IsJSONContentType(contentHeader) {
-			return fmt.Errorf("unexpected content type for JSON error response: %s. status code: %d. body: «%s»", contentHeader, resp.StatusCode, logBody(resp.Body, maxBodySize))
+			// to print the response, set the envvar BATON_DEBUG_PRINT_RESPONSE_BODY as non-empty, instead
+			return fmt.Errorf("unexpected content type for JSON error response: %s. status code: %d. body: %s", contentHeader, resp.StatusCode, string(resp.Body))
 		}
 
 		// Decode the JSON response body into the ErrorResponse
 		if err := json.Unmarshal(resp.Body, &resource); err != nil {
-			return fmt.Errorf("failed to unmarshal JSON error response: %w. status code: %d. body %v", err, resp.StatusCode, logBody(resp.Body, maxBodySize))
+			// to print the response, set the envvar BATON_DEBUG_PRINT_RESPONSE_BODY as non-empty, instead
+			return fmt.Errorf("failed to unmarshal JSON error response: %w. status code: %d. body: %s", err, resp.StatusCode, string(resp.Body))
 		}
 
 		// Construct a more detailed error message
@@ -224,23 +251,7 @@ func WithRatelimitData(resource *v2.RateLimitDescription) DoOption {
 	}
 }
 
-func WithXMLResponse(response interface{}) DoOption {
-	return func(resp *WrapperResponse) error {
-		if !IsXMLContentType(resp.Header.Get(ContentType)) {
-			return fmt.Errorf("unexpected content type for xml response: %s", resp.Header.Get(ContentType))
-		}
-		if response == nil && len(resp.Body) == 0 {
-			return nil
-		}
-		err := xml.Unmarshal(resp.Body, response)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal xml response: %w. body %v", err, resp.Body)
-		}
-		return nil
-	}
-}
-
-func WithResponse(response interface{}) DoOption {
+func WithResponse(response any) DoOption {
 	return func(resp *WrapperResponse) error {
 		if IsJSONContentType(resp.Header.Get(ContentType)) {
 			return WithJSONResponse(response)(resp)
@@ -250,6 +261,55 @@ func WithResponse(response interface{}) DoOption {
 		}
 
 		return status.Error(codes.Unknown, "unsupported content type")
+	}
+}
+
+// Handle anything that can be marshaled into JSON or XML.
+// If the response is a list, its values will be put into the "items" field.
+func WithGenericResponse(response *map[string]any) DoOption {
+	return func(resp *WrapperResponse) error {
+		if response == nil {
+			return status.Error(codes.InvalidArgument, "response is nil")
+		}
+
+		if resp.StatusCode == http.StatusNoContent {
+			return nil
+		}
+
+		var v any
+		var err error
+
+		if IsJSONContentType(resp.Header.Get(ContentType)) {
+			err = WithJSONResponse(&v)(resp)
+			if err != nil {
+				return err
+			}
+			if list, ok := v.([]any); ok {
+				(*response)["items"] = list
+			} else if vMap, ok := v.(map[string]any); ok {
+				*response = vMap
+			} else {
+				return status.Errorf(codes.Internal, "unsupported content type: %T", v)
+			}
+			return nil
+		}
+
+		if IsXMLContentType(resp.Header.Get(ContentType)) {
+			err = WithXMLResponse(response)(resp)
+			if err != nil {
+				return err
+			}
+			if list, ok := v.([]any); ok {
+				(*response)["items"] = list
+			} else if vMap, ok := v.(map[string]any); ok {
+				*response = vMap
+			} else {
+				return status.Errorf(codes.Internal, "unsupported content type: %T", v)
+			}
+			return nil
+		}
+
+		return status.Error(codes.Unknown, fmt.Sprintf("unsupported content type: %s", resp.Header.Get(ContentType)))
 	}
 }
 
@@ -293,7 +353,7 @@ func (c *BaseHttpClient) Do(req *http.Request, options ...DoOption) (*http.Respo
 		c.rateLimiter.Take()
 	}
 
-	if req.Method == http.MethodGet {
+	if req.Method == http.MethodGet && req.Header.Get("Cache-Control") != "no-cache" {
 		resp, err = c.baseHttpCache.Get(req)
 		if err != nil {
 			return nil, err
@@ -308,6 +368,14 @@ func (c *BaseHttpClient) Do(req *http.Request, options ...DoOption) (*http.Respo
 	if resp == nil {
 		resp, err = c.HttpClient.Do(req)
 		if err != nil {
+			l.Error("base-http-client: HTTP error response", zap.Error(err))
+			// Turn certain network errors into grpc statuses so we retry
+			if errors.Is(err, io.ErrUnexpectedEOF) {
+				return resp, WrapErrors(codes.Unavailable, "unexpected EOF", err)
+			}
+			if errors.Is(err, syscall.ECONNRESET) {
+				return nil, WrapErrors(codes.Unavailable, "connection reset", err)
+			}
 			var urlErr *url.Error
 			if errors.As(err, &urlErr) {
 				if urlErr.Timeout() {
@@ -341,7 +409,12 @@ func (c *BaseHttpClient) Do(req *http.Request, options ...DoOption) (*http.Respo
 	}
 
 	// Replace resp.Body with a no-op closer so nobody has to worry about closing the reader.
-	resp.Body = io.NopCloser(bytes.NewBuffer(body))
+	shouldPrint := os.Getenv("BATON_DEBUG_PRINT_RESPONSE_BODY")
+	if shouldPrint != "" {
+		resp.Body = io.NopCloser(wrapPrintBody(bytes.NewBuffer(body)))
+	} else {
+		resp.Body = io.NopCloser(bytes.NewBuffer(body))
+	}
 
 	wresp := WrapperResponse{
 		Header:     resp.Header,
@@ -358,10 +431,20 @@ func (c *BaseHttpClient) Do(req *http.Request, options ...DoOption) (*http.Respo
 		}
 	}
 
+	// Log response headers directly for certain errors
+	if resp.StatusCode >= 400 {
+		redactedHeaders := redactHeaders(resp.Header)
+		l.Error("base-http-client: HTTP error status",
+			zap.Int("status_code", resp.StatusCode),
+			zap.String("status", resp.Status),
+			zap.Any("headers", redactedHeaders),
+		)
+	}
+
 	switch resp.StatusCode {
 	case http.StatusRequestTimeout:
 		return resp, WrapErrorsWithRateLimitInfo(codes.DeadlineExceeded, resp, optErrs...)
-	case http.StatusTooManyRequests, http.StatusBadGateway, http.StatusServiceUnavailable:
+	case http.StatusTooManyRequests, http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusGatewayTimeout:
 		return resp, WrapErrorsWithRateLimitInfo(codes.Unavailable, resp, optErrs...)
 	case http.StatusNotFound:
 		return resp, WrapErrorsWithRateLimitInfo(codes.NotFound, resp, optErrs...)
@@ -393,6 +476,19 @@ func (c *BaseHttpClient) Do(req *http.Request, options ...DoOption) (*http.Respo
 	return resp, errors.Join(optErrs...)
 }
 
+func redactHeaders(h http.Header) http.Header {
+	safe := make(http.Header, len(h))
+	for k, v := range h {
+		switch strings.ToLower(k) {
+		case "authorization", "set-cookie", "cookie":
+			safe[k] = []string{"REDACTED"}
+		default:
+			safe[k] = v
+		}
+	}
+	return safe
+}
+
 func WithHeader(key, value string) RequestOption {
 	return func() (io.ReadWriter, map[string]string, error) {
 		return nil, map[string]string{
@@ -401,7 +497,21 @@ func WithHeader(key, value string) RequestOption {
 	}
 }
 
-func WithJSONBody(body interface{}) RequestOption {
+func WithNoCache() RequestOption {
+	return func() (io.ReadWriter, map[string]string, error) {
+		return nil, map[string]string{
+			"Cache-Control": "no-cache",
+		}, nil
+	}
+}
+
+func WithBody(body []byte) RequestOption {
+	return func() (io.ReadWriter, map[string]string, error) {
+		return bytes.NewBuffer(body), nil, nil
+	}
+}
+
+func WithJSONBody(body any) RequestOption {
 	return func() (io.ReadWriter, map[string]string, error) {
 		buffer := new(bytes.Buffer)
 		err := json.NewEncoder(buffer).Encode(body)
@@ -435,6 +545,24 @@ func WithFormBody(body string) RequestOption {
 	}
 }
 
+func WithXMLBody(body any) RequestOption {
+	return func() (io.ReadWriter, map[string]string, error) {
+		var buffer bytes.Buffer
+
+		err := xml.NewEncoder(&buffer).Encode(body)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		_, headers, err := WithContentTypeXMLHeader()()
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return &buffer, headers, nil
+	}
+}
+
 func WithAcceptJSONHeader() RequestOption {
 	return WithAccept(applicationJSON)
 }
@@ -445,6 +573,10 @@ func WithContentTypeJSONHeader() RequestOption {
 
 func WithAcceptXMLHeader() RequestOption {
 	return WithAccept(applicationXML)
+}
+
+func WithContentTypeXMLHeader() RequestOption {
+	return WithContentType(applicationXML)
 }
 
 func WithContentTypeFormHeader() RequestOption {
@@ -473,7 +605,7 @@ func WithBearerToken(token string) RequestOption {
 
 func (c *BaseHttpClient) NewRequest(ctx context.Context, method string, url *url.URL, options ...RequestOption) (*http.Request, error) {
 	var buffer io.ReadWriter
-	var headers map[string]string = make(map[string]string)
+	var headers = make(map[string]string)
 	for _, option := range options {
 		buf, h, err := option()
 		if err != nil {

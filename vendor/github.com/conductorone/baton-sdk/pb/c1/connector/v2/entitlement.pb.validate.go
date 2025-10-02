@@ -232,7 +232,7 @@ type EntitlementMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m EntitlementMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -413,6 +413,21 @@ func (m *EntitlementsServiceListEntitlementsRequest) validate(all bool) error {
 
 	}
 
+	if m.GetActiveSyncId() != "" {
+
+		if l := len(m.GetActiveSyncId()); l < 1 || l > 1024 {
+			err := EntitlementsServiceListEntitlementsRequestValidationError{
+				field:  "ActiveSyncId",
+				reason: "value length must be between 1 and 1024 bytes, inclusive",
+			}
+			if !all {
+				return err
+			}
+			errors = append(errors, err)
+		}
+
+	}
+
 	if len(errors) > 0 {
 		return EntitlementsServiceListEntitlementsRequestMultiError(errors)
 	}
@@ -428,7 +443,7 @@ type EntitlementsServiceListEntitlementsRequestMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m EntitlementsServiceListEntitlementsRequestMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
@@ -617,7 +632,7 @@ type EntitlementsServiceListEntitlementsResponseMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
 func (m EntitlementsServiceListEntitlementsResponseMultiError) Error() string {
-	var msgs []string
+	msgs := make([]string, 0, len(m))
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
 	}
