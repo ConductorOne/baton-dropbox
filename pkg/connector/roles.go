@@ -51,7 +51,7 @@ func (o *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 	var payload *dropbox.ListUsersPayload
 	var rateLimitData *v2.RateLimitDescription
 	var err error
-	var limit int = 100
+	var limit = 100
 
 	if pToken.Token == "" {
 		payload, rateLimitData, err = o.ListUsers(ctx, limit)
@@ -102,7 +102,7 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken 
 	var payload *dropbox.ListUsersPayload
 	var rateLimitData *v2.RateLimitDescription
 	var err error
-	var limit int = 100
+	var limit = 100
 
 	if pToken.Token == "" {
 		payload, rateLimitData, err = o.ListUsers(ctx, limit)

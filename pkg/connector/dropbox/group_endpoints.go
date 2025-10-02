@@ -285,7 +285,7 @@ func (c *Client) RemoveUserFromGroup(ctx context.Context, groupId, email string)
 func (c *Client) GetTeamMemberID(ctx context.Context, groupId, userId string) (string, error) {
 	var payload *ListGroupMembersPayload
 	var err error
-	var limit int = 100
+	var limit = 100
 
 	payload, _, err = c.ListGroupMembers(ctx, groupId, limit)
 	if err != nil {
