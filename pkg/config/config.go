@@ -7,21 +7,27 @@ import (
 var (
 	AppKey = field.StringField(
 		"app-key",
+		field.WithDisplayName("App key"),
 		field.WithDescription("The app key used to authenticate with Dropbox"),
 		field.WithRequired(true),
 	)
 	AppSecret = field.StringField(
 		"app-secret",
+		field.WithDisplayName("App secret"),
+		field.WithIsSecret(true),
 		field.WithDescription("The app secret used to authenticate with Dropbox"),
 		field.WithRequired(true),
 	)
 	RefreshTokenField = field.StringField(
 		"refresh-token",
+		field.WithDisplayName("OAuth refresh token"),
+		field.WithIsSecret(true),
 		field.WithDescription("The refresh token used to get an access token for authentication with Dropbox"),
 		field.WithRequired(false),
 	)
 	ConfigureField = field.BoolField(
 		"configure",
+		field.WithDisplayName("Configure"),
 		field.WithDescription("Get the refresh token the first time you run the connector."),
 		field.WithRequired(false),
 	)
@@ -34,6 +40,5 @@ var (
 		RefreshTokenField,
 		ConfigureField,
 	}
-	//go:generate go run ./gen
 	ConfigurationSchema = field.NewConfiguration(ConfigurationFields)
 )
