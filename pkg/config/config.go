@@ -43,4 +43,9 @@ var (
 )
 
 //go:generate go run ./gen
-var ConfigurationSchema = field.NewConfiguration(ConfigurationFields)
+var ConfigurationSchema = field.NewConfiguration(
+	ConfigurationFields,
+	field.WithConnectorDisplayName("Dropbox v2"),
+	field.WithHelpUrl("/docs/baton/dropbox"),
+	field.WithIconUrl("/static/app-icons/dropbox.svg"),
+)
