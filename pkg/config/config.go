@@ -30,6 +30,7 @@ var (
 		field.WithDisplayName("Configure"),
 		field.WithDescription("Get the refresh token the first time you run the connector."),
 		field.WithRequired(false),
+		field.WithExportTarget(field.ExportTargetCLIOnly),
 	)
 	// ConfigurationFields defines the external configuration required for the
 	// connector to run. Note: these fields can be marked as optional or
