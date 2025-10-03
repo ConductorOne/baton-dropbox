@@ -6,13 +6,14 @@ import (
 	"log"
 	"os"
 
+	cfg "github.com/conductorone/baton-dropbox/pkg/config"
 	"github.com/conductorone/baton-dropbox/pkg/connector"
 	"github.com/conductorone/baton-dropbox/pkg/connector/dropbox"
 	"github.com/conductorone/baton-sdk/pkg/config"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
+	"github.com/conductorone/baton-sdk/pkg/field"
 	"github.com/conductorone/baton-sdk/pkg/types"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
@@ -25,7 +26,7 @@ func main() {
 		ctx,
 		"baton-dropbox",
 		getConnector,
-		ConfigurationSchema,
+		cfg.ConfigurationSchema,
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
@@ -41,10 +42,14 @@ func main() {
 	}
 }
 
-func getConnector(ctx context.Context, v *viper.Viper) (types.ConnectorServer, error) {
-	configureArg := v.GetBool(ConfigureField.FieldName)
-	if configureArg {
-		if err := configure(ctx, v); err != nil {
+func getConnector(ctx context.Context, dropboxCfg *cfg.Dropbox) (types.ConnectorServer, error) {
+	if err := field.Validate(cfg.ConfigurationSchema, dropboxCfg); err != nil {
+		return nil, err
+	}
+
+	// In production, `dropboxCfg.Configure` is always false.
+	if dropboxCfg.Configure {
+		if err := configure(ctx, dropboxCfg); err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		} else {
@@ -52,7 +57,7 @@ func getConnector(ctx context.Context, v *viper.Viper) (types.ConnectorServer, e
 		}
 	}
 
-	if v.GetString(RefreshTokenField.FieldName) == "" {
+	if dropboxCfg.RefreshToken == "" {
 		return nil, fmt.Errorf("refresh token is required, get it by running the connector with the --configure flag")
 	}
 
@@ -61,9 +66,9 @@ func getConnector(ctx context.Context, v *viper.Viper) (types.ConnectorServer, e
 		ctx,
 		connector.WithRefreshToken(
 			ctx,
-			v.GetString(AppKey.FieldName),
-			v.GetString(AppSecret.FieldName),
-			v.GetString(RefreshTokenField.FieldName),
+			dropboxCfg.AppKey,
+			dropboxCfg.AppSecret,
+			dropboxCfg.RefreshToken,
 		),
 	)
 
@@ -79,13 +84,14 @@ func getConnector(ctx context.Context, v *viper.Viper) (types.ConnectorServer, e
 	return connector, nil
 }
 
-func configure(ctx context.Context, v *viper.Viper) error {
-	appKey, appSecret := v.GetString("app-key"), v.GetString("app-secret")
-
-	if appKey == "" {
+func configure(ctx context.Context, dropboxCfg *cfg.Dropbox) error {
+	appKey := dropboxCfg.AppKey
+	if dropboxCfg.AppKey == "" {
 		return fmt.Errorf("app key is required")
 	}
-	if appSecret == "" {
+
+	appSecret := dropboxCfg.AppSecret
+	if dropboxCfg.AppSecret == "" {
 		return fmt.Errorf("app secret is required")
 	}
 
