@@ -19,6 +19,7 @@ type Profile struct {
 	Name         Name     `json:"name"`
 	Email        string   `json:"email"`
 	Groups       []string `json:"groups"`
+	Status       Tag      `json:"status"`
 }
 
 func (u UserPayload) HasRole(roleID string) bool {
@@ -78,5 +79,32 @@ type MembersPayload struct {
 
 type MembersProfile struct {
 	Profile
-	TeamMemberID string `json:"team_member_id"`
+}
+
+// Account Provisioning - Members Add.
+type AddMemberRequest struct {
+	NewMembers []NewMemberInfo `json:"new_members"`
+}
+
+type NewMemberInfo struct {
+	MemberEmail string `json:"member_email"`
+}
+
+type AddMemberResponse struct {
+	Tag      string            `json:".tag"`
+	Complete []AddMemberResult `json:"complete"`
+}
+
+type AddMemberResult struct {
+	Tag     string  `json:".tag"`
+	Profile Profile `json:"profile,omitempty"`
+}
+
+// Account Deprovisioning - Members Remove.
+type RemoveMemberRequest struct {
+	User EmailTag `json:"user"`
+}
+
+type RemoveMemberResponse struct {
+	Tag string `json:".tag"`
 }

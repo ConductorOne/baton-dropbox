@@ -12,6 +12,10 @@ const (
 	// users.
 	ListUsersURL         = BaseURL + "/2/team/members/list_v2"
 	ListUsersContinueURL = BaseURL + "/2/team/members/list/continue_v2"
+	AddMemberURL         = BaseURL + "/2/team/members/add"
+	RemoveMemberURL      = BaseURL + "/2/team/members/remove"
+	SuspendMemberURL     = BaseURL + "/2/team/members/suspend"
+	UnsuspendMemberURL   = BaseURL + "/2/team/members/unsuspend"
 
 	// roles.
 	SetRoleURL = BaseURL + "/2/team/members/set_admin_permissions_v2"
