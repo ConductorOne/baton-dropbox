@@ -24,6 +24,7 @@ var (
 		field.WithIsSecret(true),
 		field.WithDescription("The refresh token used to get an access token for authentication with Dropbox"),
 		field.WithRequired(false),
+		field.WithExportTarget(field.ExportTargetCLIOnly),
 	)
 	ConfigureField = field.BoolField(
 		"configure",
