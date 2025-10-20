@@ -15,7 +15,7 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/crypto/providers/jwk"
 	"github.com/conductorone/baton-sdk/pkg/logging"
 	"github.com/conductorone/baton-sdk/pkg/ugrpc"
-	"github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v4"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -195,7 +195,7 @@ func OptionallyAddLambdaCommand[T field.Configurable](
 		}
 
 		oauthClient := v1.NewConnectorOauthTokenServiceClient(grpcClient)
-		oauthTokenSource := lambdaTokenSource{
+		oauthTokenSource := &lambdaTokenSource{
 			ctx:    runCtx,
 			webKey: webKey,
 			client: oauthClient,

@@ -3,7 +3,7 @@ module github.com/conductorone/baton-dropbox
 go 1.25.2
 
 require (
-	github.com/conductorone/baton-sdk v0.4.14-0.20251020213741-4dd6ec7977af
+	github.com/conductorone/baton-sdk v0.4.14-0.20251020214538-000b5521616f
 	github.com/ennyjfrick/ruleguard-logfatal v0.0.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/quasilyte/go-ruleguard/dsl v0.3.22
@@ -51,7 +51,6 @@ require (
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/gammazero/deque v1.0.0 // indirect
 	github.com/glebarez/go-sqlite v1.22.0 // indirect
-	github.com/go-jose/go-jose/v3 v3.0.4 // indirect
 	github.com/go-jose/go-jose/v4 v4.0.5 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
