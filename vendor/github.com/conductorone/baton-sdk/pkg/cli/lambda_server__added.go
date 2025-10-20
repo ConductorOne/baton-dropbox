@@ -15,11 +15,12 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/crypto/providers/jwk"
 	"github.com/conductorone/baton-sdk/pkg/logging"
 	"github.com/conductorone/baton-sdk/pkg/ugrpc"
+	"github.com/go-git/go-git/v5/plumbing/format/config"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"golang.org/x/oauth2"
 	"go.uber.org/zap"
+	"golang.org/x/oauth2"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/conductorone/baton-sdk/internal/connector"
@@ -195,7 +196,7 @@ func OptionallyAddLambdaCommand[T field.Configurable](
 
 		oauthClient := v1.NewConnectorOauthTokenServiceClient(grpcClient)
 		oauthTokenSource := lambdaOauth2TokenSource{
-			ctx: runCtx,
+			ctx:    runCtx,
 			client: oauthClient,
 		}
 		c.SetTokenSource(oauthTokenSource)
@@ -249,8 +250,8 @@ func createSessionCacheConstructor(grpcClient grpc.ClientConnInterface) sessions
 	}
 }
 
-func lambdaTokenSource struct {
-	ctx context.Context
+type lambdaTokenSource struct {
+	ctx    context.Context
 	client *v1.ConnectorOauthTokenServiceClient
 }
 
@@ -270,8 +271,8 @@ func (s *lambdaTokenSource) Token() (*oauth2.Token, error) {
 		return nil, fmt.Errorf("lambda-run: failed to decrypt config: %w", err)
 	}
 
-	var t oauth2.Token
-	err = json.Unmarshal(decrypted, &configStruct)
+	t := oauth2.Token{}
+	err = json.Unmarshal(decrypted, &t)
 	if err != nil {
 		return nil, fmt.Errorf("lambda-run: failed to unmarshal decrypted config: %w", err)
 	}
