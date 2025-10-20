@@ -102,3 +102,7 @@ func (c *Connector) Metadata(ctx context.Context) (*v2.ConnectorMetadata, error)
 func (c *Connector) Validate(ctx context.Context) (annotations.Annotations, error) {
 	return nil, nil
 }
+
+func (c *Connector) SetTokenSource(ts oauth2.TokenSource) {
+	c.client.TokenSource = ts
+}
