@@ -133,7 +133,7 @@ func (c *connectorRunner) processTask(ctx context.Context, task *v1.Task) error 
 	return nil
 }
 
-func (c *connectorRunner) backoff(ctx context.Context, errCount int) time.Duration {
+func (c *connectorRunner) backoff(_ context.Context, errCount int) time.Duration {
 	waitDuration := time.Duration(errCount*errCount) * time.Second
 	if waitDuration > time.Minute {
 		waitDuration = time.Minute
@@ -344,6 +344,14 @@ type runnerConfig struct {
 	externalResourceC1Z                 string
 	externalResourceEntitlementIdFilter string
 	skipEntitlementsAndGrants           bool
+	sessionStoreEnabled                 bool
+}
+
+func WithSessionStoreEnabled() Option {
+	return func(ctx context.Context, w *runnerConfig) error {
+		w.sessionStoreEnabled = true
+		return nil
+	}
 }
 
 // WithRateLimiterConfig sets the RateLimiterConfig for a runner.
@@ -379,10 +387,13 @@ func WithExternalLimiter(address string, opts map[string]string) Option {
 // `usePercent` is value between 0 and 100.
 func WithSlidingMemoryLimiter(usePercent int64) Option {
 	return func(ctx context.Context, w *runnerConfig) error {
+		if usePercent < 0 || usePercent > 100 {
+			return fmt.Errorf("usePercent must be between 0 and 100")
+		}
 		w.rlCfg = &ratelimitV1.RateLimiterConfig{
 			Type: &ratelimitV1.RateLimiterConfig_SlidingMem{
 				SlidingMem: &ratelimitV1.SlidingMemoryLimiter{
-					UsePercent: float64(usePercent / 100),
+					UsePercent: float64(usePercent) / 100.0,
 				},
 			},
 		}
@@ -684,6 +695,10 @@ func NewConnectorRunner(ctx context.Context, c types.ConnectorServer, opts ...Op
 		wrapperOpts = append(wrapperOpts, connector.WithTargetedSyncResourceIDs(cfg.targetedSyncResourceIDs))
 	}
 
+	if cfg.sessionStoreEnabled {
+		wrapperOpts = append(wrapperOpts, connector.WithSessionStoreEnabled())
+	}
+
 	cw, err := connector.NewWrapper(ctx, c, wrapperOpts...)
 	if err != nil {
 		return nil, err
@@ -766,7 +781,15 @@ func NewConnectorRunner(ctx context.Context, c types.ConnectorServer, opts ...Op
 		return runner, nil
 	}
 
-	tm, err := c1api.NewC1TaskManager(ctx, cfg.clientID, cfg.clientSecret, cfg.tempDir, cfg.skipFullSync, cfg.externalResourceC1Z, cfg.externalResourceEntitlementIdFilter, cfg.targetedSyncResourceIDs)
+	tm, err := c1api.NewC1TaskManager(ctx,
+		cfg.clientID,
+		cfg.clientSecret,
+		cfg.tempDir,
+		cfg.skipFullSync,
+		cfg.externalResourceC1Z,
+		cfg.externalResourceEntitlementIdFilter,
+		cfg.targetedSyncResourceIDs,
+	)
 	if err != nil {
 		return nil, err
 	}
