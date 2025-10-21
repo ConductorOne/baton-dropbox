@@ -57,9 +57,9 @@ func getConnector(ctx context.Context, dropboxCfg *cfg.Dropbox) (types.Connector
 		}
 	}
 
-	if dropboxCfg.RefreshToken == "" {
-		return nil, fmt.Errorf("refresh token is required, get it by running the connector with the --configure flag")
-	}
+	// if dropboxCfg.RefreshToken == "" {
+	// 	return nil, fmt.Errorf("refresh token is required, get it by running the connector with the --configure flag")
+	// }
 
 	l := ctxzap.Extract(ctx)
 	cb, err := connector.New(

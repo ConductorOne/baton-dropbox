@@ -31,6 +31,11 @@ func WithRefreshToken(ctx context.Context, appKey, appSecret, refreshToken strin
 			return fmt.Errorf("error creating dropbox client: %w", err)
 		}
 
+		c.client = client
+		if refreshToken == "" {
+			return nil
+		}
+
 		accessToken, _, err := client.RequestAccessTokenUsingRefreshToken(ctx)
 		if err != nil {
 			return fmt.Errorf("dropbox-connector: error getting access token using refresh token: %w", err)
