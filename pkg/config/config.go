@@ -22,8 +22,8 @@ var (
 		"refresh-token",
 		field.WithDisplayName("OAuth refresh token"),
 		field.WithIsSecret(true),
-		field.WithDescription("The refresh token used to get an access token for authentication with Dropbox"),
-		field.WithRequired(false),
+		field.WithDescription("The refresh token used to get an access token for authentication with Dropbox, you have to use `--configure` flag to get the refreshToken"),
+		field.WithRequired(true),
 		field.WithExportTarget(field.ExportTargetCLIOnly),
 	)
 	ConfigureField = field.BoolField(
