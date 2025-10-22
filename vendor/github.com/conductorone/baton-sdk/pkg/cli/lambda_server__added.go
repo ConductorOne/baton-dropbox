@@ -191,7 +191,7 @@ func OptionallyAddLambdaCommand[T field.Configurable](
 			SessionStore: &lazySessionStore{constructor: createSessionCacheConstructor(grpcClient)},
 		}
 
-		if hasOauthField(connectorSchema.fields) {
+		if hasOauthField(connectorSchema.Fields) {
 			ops.TokenSource = &lambdaTokenSource{
 				ctx:    runCtx,
 				webKey: webKey,
@@ -242,20 +242,11 @@ func OptionallyAddLambdaCommand[T field.Configurable](
 	return nil
 }
 
-// createSessionCacheConstructor creates a session cache constructor function that uses the provided gRPC client
+// createSessionCacheConstructor creates a session cache constructor function that uses the provided gRPC client.
 func createSessionCacheConstructor(grpcClient grpc.ClientConnInterface) sessions.SessionStoreConstructor {
 	return func(ctx context.Context, opt ...sessions.SessionStoreConstructorOption) (sessions.SessionStore, error) {
 		// Create the gRPC session client using the same gRPC connection
 		client := v1.NewBatonSessionServiceClient(grpcClient)
-		// Create and return the session cache
-		return session.NewGRPCSessionCache(ctx, client, opt...)
-	}
-}
-
-func createSessionOauthConstructor(grpcClient grpc.ClientConnInterface) sessions.SessionStoreConstructor {
-	return func(ctx context.Context, opt ...sessions.SessionStoreConstructorOption) (sessions.SessionStore, error) {
-		// Create the gRPC session client using the same gRPC connection
-		client := v1.NewConnectorOauthTokenServiceClient(grpcClient)
 		// Create and return the session cache
 		return session.NewGRPCSessionCache(ctx, client, opt...)
 	}
@@ -292,8 +283,13 @@ func (s *lambdaTokenSource) Token() (*oauth2.Token, error) {
 }
 
 func hasOauthField(fields []field.SchemaField) bool {
-	for _, field := range fields {
-		if fields.ConnectorConfig.FieldType == field.OAuth2 {
+	// for testing. need to revert.
+	if true {
+		return true
+	}
+
+	for _, f := range fields {
+		if f.ConnectorConfig.FieldType == field.OAuth2 {
 			return true
 		}
 	}
