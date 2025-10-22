@@ -3,7 +3,7 @@ module github.com/conductorone/baton-dropbox
 go 1.25.2
 
 require (
-	github.com/conductorone/baton-sdk v0.4.14-0.20251021203307-fd0c75932e2f
+	github.com/conductorone/baton-sdk v0.5.1-0.20251022192417-172972a0aa8e
 	github.com/ennyjfrick/ruleguard-logfatal v0.0.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/quasilyte/go-ruleguard/dsl v0.3.22

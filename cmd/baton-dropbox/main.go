@@ -9,6 +9,7 @@ import (
 	cfg "github.com/conductorone/baton-dropbox/pkg/config"
 	"github.com/conductorone/baton-dropbox/pkg/connector"
 	"github.com/conductorone/baton-dropbox/pkg/connector/dropbox"
+	"github.com/conductorone/baton-sdk/pkg/cli"
 	"github.com/conductorone/baton-sdk/pkg/config"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
 	"github.com/conductorone/baton-sdk/pkg/field"
@@ -22,7 +23,7 @@ var version = "dev"
 func main() {
 	ctx := context.Background()
 
-	_, cmd, err := config.DefineConfiguration(
+	_, cmd, err := config.DefineConfigurationV2(
 		ctx,
 		"baton-dropbox",
 		getConnector,
@@ -42,7 +43,7 @@ func main() {
 	}
 }
 
-func getConnector(ctx context.Context, dropboxCfg *cfg.Dropbox) (types.ConnectorServer, error) {
+func getConnector(ctx context.Context, dropboxCfg *cfg.Dropbox, runtimeOpts cli.RunTimeOpts) (types.ConnectorServer, error) {
 	if err := field.Validate(cfg.ConfigurationSchema, dropboxCfg); err != nil {
 		return nil, err
 	}
@@ -57,20 +58,22 @@ func getConnector(ctx context.Context, dropboxCfg *cfg.Dropbox) (types.Connector
 		}
 	}
 
-	// if dropboxCfg.RefreshToken == "" {
-	// 	return nil, fmt.Errorf("refresh token is required, get it by running the connector with the --configure flag")
-	// }
-
 	l := ctxzap.Extract(ctx)
-	cb, err := connector.New(
+
+	opts := connector.WithRefreshToken(
 		ctx,
-		connector.WithRefreshToken(
+		dropboxCfg.AppKey,
+		dropboxCfg.AppSecret,
+		dropboxCfg.RefreshToken,
+	)
+	if dropboxCfg.RefreshToken == "" {
+		opts = connector.WithTokenSource(
 			ctx,
 			dropboxCfg.AppKey,
-			dropboxCfg.AppSecret,
-			dropboxCfg.RefreshToken,
-		),
-	)
+			runtimeOpts.TokenSource,
+		)
+	}
+	cb, err := connector.New(ctx, opts)
 
 	if err != nil {
 		l.Error("error creating connector", zap.Error(err))

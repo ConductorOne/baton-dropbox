@@ -22,6 +22,9 @@ type Option func(*Connector) error
 // WithRefreshToken configures the connector to use refresh token authentication.
 func WithRefreshToken(ctx context.Context, appKey, appSecret, refreshToken string) Option {
 	return func(c *Connector) error {
+		if refreshToken == "" {
+			return fmt.Errorf("refresh token is required, get it by running the connector with the --configure flag")
+		}
 		client, err := dropbox.NewClient(ctx, dropbox.Config{
 			AppKey:       appKey,
 			AppSecret:    appSecret,
