@@ -29,7 +29,7 @@ jobs:
       # Connector-specific details
       CONNECTOR_GRANT: 'group:g:972aa9fd605e45b50000000000000034:owner:user:dbid:AADSHngsuonaSYR4BHryfeXi9A9CKQ1VOaI'
       CONNECTOR_ENTITLEMENT: 'group:g:972aa9fd605e45b50000000000000034:owner'
-      CONNECTOR_PRINCIPAL: 'dbid:AADSHngsuonaSYR4BHryfeXi9A9CKQ1VOaI'
+      CONNECTOR_PRINCIPAL: 'dbid:AADJa1ktU7L0zFymqnPAC8g8nhh06VD4fQw'
       CONNECTOR_PRINCIPAL_TYPE: 'user'
 
       # Secrets for Baton authentication
