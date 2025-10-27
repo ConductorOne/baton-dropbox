@@ -31,9 +31,9 @@ func (m *localRevoker) ShouldDebug() bool {
 func (m *localRevoker) Next(ctx context.Context) (*v1.Task, time.Duration, error) {
 	var task *v1.Task
 	m.o.Do(func() {
-		task = v1.Task_builder{
-			Revoke: &v1.Task_RevokeTask{},
-		}.Build()
+		task = &v1.Task{
+			TaskType: &v1.Task_Revoke{},
+		}
 	})
 	return task, 0, nil
 }

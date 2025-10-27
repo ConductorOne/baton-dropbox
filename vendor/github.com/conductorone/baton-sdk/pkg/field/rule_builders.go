@@ -16,42 +16,42 @@ func NewIntBuilder(rules *v1_conf.Int64Rules) *IntRuler {
 }
 
 func (b *IntRuler) Eq(value int64) *IntRuler {
-	b.rules.SetEq(value)
+	b.rules.Eq = &value
 	return b
 }
 
 func (b *IntRuler) Gt(value int64) *IntRuler {
-	b.rules.SetGt(value)
+	b.rules.Gt = &value
 	return b
 }
 
 func (b *IntRuler) Lt(value int64) *IntRuler {
-	b.rules.SetLt(value)
+	b.rules.Lt = &value
 	return b
 }
 
 func (b *IntRuler) Lte(value int64) *IntRuler {
-	b.rules.SetLte(value)
+	b.rules.Lte = &value
 	return b
 }
 
 func (b *IntRuler) Gte(value int64) *IntRuler {
-	b.rules.SetGte(value)
+	b.rules.Gte = &value
 	return b
 }
 
 func (b *IntRuler) In(values []int64) *IntRuler {
-	b.rules.SetIn(values)
+	b.rules.In = values
 	return b
 }
 
 func (b *IntRuler) NotIn(values []int64) *IntRuler {
-	b.rules.SetNotIn(values)
+	b.rules.NotIn = values
 	return b
 }
 
 func (b *IntRuler) ValidateEmpty(value bool) *IntRuler {
-	b.rules.SetValidateEmpty(value)
+	b.rules.ValidateEmpty = value
 	return b
 }
 
@@ -64,7 +64,7 @@ func NewBoolBuilder(rules *v1_conf.BoolRules) *BoolRuler {
 }
 
 func (b *BoolRuler) Eq(v bool) *BoolRuler {
-	b.rules.SetEq(v)
+	b.rules.Eq = &v
 	return b
 }
 
@@ -77,22 +77,22 @@ func NewStringBuilder(rules *v1_conf.StringRules) *StringRuler {
 }
 
 func (b *StringRuler) Eq(value string) *StringRuler {
-	b.rules.SetEq(value)
+	b.rules.Eq = &value
 	return b
 }
 
 func (b *StringRuler) Len(value uint64) *StringRuler {
-	b.rules.SetLen(value)
+	b.rules.Len = &value
 	return b
 }
 
 func (b *StringRuler) MinLen(value uint64) *StringRuler {
-	b.rules.SetMinLen(value)
+	b.rules.MinLen = &value
 	return b
 }
 
 func (b *StringRuler) MaxLen(value uint64) *StringRuler {
-	b.rules.SetMaxLen(value)
+	b.rules.MaxLen = &value
 	return b
 }
 
@@ -101,101 +101,101 @@ func (b *StringRuler) Pattern(value string) *StringRuler {
 	if err != nil {
 		panic(fmt.Errorf("invalid regex: %w", err))
 	}
-	b.rules.SetPattern(value)
+	b.rules.Pattern = &value
 	return b
 }
 
 func (b *StringRuler) Prefix(value string) *StringRuler {
-	b.rules.SetPrefix(value)
+	b.rules.Prefix = &value
 	return b
 }
 
 func (b *StringRuler) Suffix(value string) *StringRuler {
-	b.rules.SetSuffix(value)
+	b.rules.Suffix = &value
 	return b
 }
 
 func (b *StringRuler) Contains(value string) *StringRuler {
-	b.rules.SetContains(value)
+	b.rules.Contains = &value
 	return b
 }
 
 func (b *StringRuler) NotContains(value string) *StringRuler {
-	b.rules.SetNotContains(value)
+	b.rules.NotContains = &value
 	return b
 }
 
 func (b *StringRuler) In(values []string) *StringRuler {
-	b.rules.SetIn(values)
+	b.rules.In = values
 	return b
 }
 
 func (b *StringRuler) NotIn(values []string) *StringRuler {
-	b.rules.SetNotIn(values)
+	b.rules.NotIn = values
 	return b
 }
 
 func (b *StringRuler) IsEmail() *StringRuler {
-	if b.rules.GetWellKnown() != 0 {
+	if b.rules.WellKnown != 0 {
 		panic("well known rules are already set")
 	}
-	b.rules.SetWellKnown(v1_conf.WellKnownString_WELL_KNOWN_STRING_EMAIL)
+	b.rules.WellKnown = v1_conf.WellKnownString_WELL_KNOWN_STRING_EMAIL
 	return b
 }
 
 func (b *StringRuler) IsHostname() *StringRuler {
-	if b.rules.GetWellKnown() != 0 {
+	if b.rules.WellKnown != 0 {
 		panic("well known rules are already set")
 	}
-	b.rules.SetWellKnown(v1_conf.WellKnownString_WELL_KNOWN_STRING_HOSTNAME)
+	b.rules.WellKnown = v1_conf.WellKnownString_WELL_KNOWN_STRING_HOSTNAME
 	return b
 }
 
 func (b *StringRuler) IsIP() *StringRuler {
-	if b.rules.GetWellKnown() != 0 {
+	if b.rules.WellKnown != 0 {
 		panic("well known rules are already set")
 	}
-	b.rules.SetWellKnown(v1_conf.WellKnownString_WELL_KNOWN_STRING_IP)
+	b.rules.WellKnown = v1_conf.WellKnownString_WELL_KNOWN_STRING_IP
 	return b
 }
 
 func (b *StringRuler) IsIpv4() *StringRuler {
-	if b.rules.GetWellKnown() != 0 {
+	if b.rules.WellKnown != 0 {
 		panic("well known rules are already set")
 	}
-	b.rules.SetWellKnown(v1_conf.WellKnownString_WELL_KNOWN_STRING_IPV4)
+	b.rules.WellKnown = v1_conf.WellKnownString_WELL_KNOWN_STRING_IPV4
 	return b
 }
 
 func (b *StringRuler) IsIpv6() *StringRuler {
-	if b.rules.GetWellKnown() != 0 {
+	if b.rules.WellKnown != 0 {
 		panic("well known rules are already set")
 	}
-	b.rules.SetWellKnown(v1_conf.WellKnownString_WELL_KNOWN_STRING_IPV6)
+	b.rules.WellKnown = v1_conf.WellKnownString_WELL_KNOWN_STRING_IPV6
 	return b
 }
 
 func (b *StringRuler) IsURI() *StringRuler {
-	if b.rules.GetWellKnown() != 0 {
+	if b.rules.WellKnown != 0 {
 		panic("well known rules are already set")
 	}
-	b.rules.SetWellKnown(v1_conf.WellKnownString_WELL_KNOWN_STRING_URI)
+	b.rules.WellKnown = v1_conf.WellKnownString_WELL_KNOWN_STRING_URI
 	return b
 }
 
 func (b *StringRuler) IsAddress() *StringRuler {
-	if b.rules.GetWellKnown() != 0 {
+	if b.rules.WellKnown != 0 {
 		panic("well known rules are already set")
 	}
-	b.rules.SetWellKnown(v1_conf.WellKnownString_WELL_KNOWN_STRING_ADDRESS)
+	b.rules.WellKnown = v1_conf.WellKnownString_WELL_KNOWN_STRING_ADDRESS
 	return b
 }
 
 func (b *StringRuler) IsUUID() *StringRuler {
-	if b.rules.GetWellKnown() != 0 {
+	if b.rules.WellKnown != 0 {
 		panic("well known rules are already set")
 	}
-	b.rules.SetWellKnown(v1_conf.WellKnownString_WELL_KNOWN_STRING_UUID)
+	b.rules.WellKnown = v1_conf.WellKnownString_WELL_KNOWN_STRING_UUID
 	return b
 }
 
@@ -205,32 +205,32 @@ type StringSliceRuler struct {
 }
 
 func NewRepeatedStringBuilder(rules *v1_conf.RepeatedStringRules) *StringSliceRuler {
-	itemRules := rules.GetItemRules()
+	itemRules := rules.ItemRules
 	if itemRules == nil {
 		itemRules = &v1_conf.StringRules{}
-		rules.SetItemRules(itemRules)
+		rules.ItemRules = itemRules
 	}
 	stringer := NewStringBuilder(itemRules)
 	return &StringSliceRuler{rules: rules, stringer: stringer}
 }
 
 func (b *StringSliceRuler) MinItems(value uint64) *StringSliceRuler {
-	b.rules.SetMinItems(value)
+	b.rules.MinItems = &value
 	return b
 }
 
 func (b *StringSliceRuler) MaxItems(value uint64) *StringSliceRuler {
-	b.rules.SetMaxItems(value)
+	b.rules.MaxItems = &value
 	return b
 }
 
 func (b *StringSliceRuler) Unique(unique bool) *StringSliceRuler {
-	b.rules.SetUnique(unique)
+	b.rules.Unique = unique
 	return b
 }
 
 func (b *StringSliceRuler) ValidateEmpty(value bool) *StringSliceRuler {
-	b.rules.SetValidateEmpty(value)
+	b.rules.ValidateEmpty = value
 	return b
 }
 

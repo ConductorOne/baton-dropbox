@@ -189,7 +189,7 @@ func (c *connectorRunner) run(ctx context.Context) error {
 				continue
 			}
 
-			l.Debug("runner: got task", zap.String("task_id", nextTask.GetId()), zap.String("task_type", tasks.GetType(nextTask).String()))
+			l.Debug("runner: got task", zap.String("task_id", nextTask.Id), zap.String("task_type", tasks.GetType(nextTask).String()))
 
 			// If we're in one-shot mode, process the task synchronously.
 			if c.oneShot {
@@ -200,7 +200,7 @@ func (c *connectorRunner) run(ctx context.Context) error {
 					l.Error(
 						"runner: error processing on-demand task",
 						zap.Error(err),
-						zap.String("task_id", nextTask.GetId()),
+						zap.String("task_id", nextTask.Id),
 						zap.String("task_type", tasks.GetType(nextTask).String()),
 					)
 					return err
@@ -210,17 +210,17 @@ func (c *connectorRunner) run(ctx context.Context) error {
 
 			// We got a task, so process it concurrently.
 			go func(t *v1.Task) {
-				l.Debug("runner: starting processing task", zap.String("task_id", t.GetId()), zap.String("task_type", tasks.GetType(t).String()))
+				l.Debug("runner: starting processing task", zap.String("task_id", t.Id), zap.String("task_type", tasks.GetType(t).String()))
 				defer sem.Release(1)
 				err := c.processTask(ctx, t)
 				if err != nil {
 					if strings.Contains(err.Error(), "grpc: the client connection is closing") {
 						stopForLoop = true
 					}
-					l.Error("runner: error processing task", zap.Error(err), zap.String("task_id", t.GetId()), zap.String("task_type", tasks.GetType(t).String()))
+					l.Error("runner: error processing task", zap.Error(err), zap.String("task_id", t.Id), zap.String("task_type", tasks.GetType(t).String()))
 					return
 				}
-				l.Debug("runner: task processed", zap.String("task_id", t.GetId()), zap.String("task_type", tasks.GetType(t).String()))
+				l.Debug("runner: task processed", zap.String("task_id", t.Id), zap.String("task_type", tasks.GetType(t).String()))
 			}(nextTask)
 
 			l.Debug("runner: dispatched task, waiting for next task", zap.Duration("wait_duration", waitDuration))
@@ -344,7 +344,6 @@ type runnerConfig struct {
 	externalResourceC1Z                 string
 	externalResourceEntitlementIdFilter string
 	skipEntitlementsAndGrants           bool
-	skipGrants                          bool
 	sessionStoreEnabled                 bool
 	syncResourceTypeIDs                 []string
 }
@@ -371,12 +370,14 @@ func WithRateLimiterConfig(cfg *ratelimitV1.RateLimiterConfig) Option {
 // The `opts` map is injected into the environment in order for the service to be configured.
 func WithExternalLimiter(address string, opts map[string]string) Option {
 	return func(ctx context.Context, w *runnerConfig) error {
-		w.rlCfg = ratelimitV1.RateLimiterConfig_builder{
-			External: ratelimitV1.ExternalLimiter_builder{
-				Address: address,
-				Options: opts,
-			}.Build(),
-		}.Build()
+		w.rlCfg = &ratelimitV1.RateLimiterConfig{
+			Type: &ratelimitV1.RateLimiterConfig_External{
+				External: &ratelimitV1.ExternalLimiter{
+					Address: address,
+					Options: opts,
+				},
+			},
+		}
 
 		return nil
 	}
@@ -390,11 +391,13 @@ func WithSlidingMemoryLimiter(usePercent int64) Option {
 		if usePercent < 0 || usePercent > 100 {
 			return fmt.Errorf("usePercent must be between 0 and 100")
 		}
-		w.rlCfg = ratelimitV1.RateLimiterConfig_builder{
-			SlidingMem: ratelimitV1.SlidingMemoryLimiter_builder{
-				UsePercent: float64(usePercent) / 100.0,
-			}.Build(),
-		}.Build()
+		w.rlCfg = &ratelimitV1.RateLimiterConfig{
+			Type: &ratelimitV1.RateLimiterConfig_SlidingMem{
+				SlidingMem: &ratelimitV1.SlidingMemoryLimiter{
+					UsePercent: float64(usePercent) / 100.0,
+				},
+			},
+		}
 
 		return nil
 	}
@@ -405,12 +408,14 @@ func WithSlidingMemoryLimiter(usePercent int64) Option {
 // `period` represents the elapsed time between two instants as an int64 nanosecond count.
 func WithFixedMemoryLimiter(rate int64, period time.Duration) Option {
 	return func(ctx context.Context, w *runnerConfig) error {
-		w.rlCfg = ratelimitV1.RateLimiterConfig_builder{
-			FixedMem: ratelimitV1.FixedMemoryLimiter_builder{
-				Rate:   rate,
-				Period: durationpb.New(period),
-			}.Build(),
-		}.Build()
+		w.rlCfg = &ratelimitV1.RateLimiterConfig{
+			Type: &ratelimitV1.RateLimiterConfig_FixedMem{
+				FixedMem: &ratelimitV1.FixedMemoryLimiter{
+					Rate:   rate,
+					Period: durationpb.New(period),
+				},
+			},
+		}
 
 		return nil
 	}
@@ -663,16 +668,6 @@ func WithSkipEntitlementsAndGrants(skip bool) Option {
 	}
 }
 
-func WithSkipGrants(skip bool) Option {
-	return func(ctx context.Context, cfg *runnerConfig) error {
-		if skip && len(cfg.targetedSyncResourceIDs) == 0 {
-			return fmt.Errorf("skip-grants can only be set within a targeted sync")
-		}
-		cfg.skipGrants = skip
-		return nil
-	}
-}
-
 // NewConnectorRunner creates a new connector runner.
 func NewConnectorRunner(ctx context.Context, c types.ConnectorServer, opts ...Option) (*connectorRunner, error) {
 	runner := &connectorRunner{}
@@ -786,7 +781,6 @@ func NewConnectorRunner(ctx context.Context, c types.ConnectorServer, opts ...Op
 				local.WithExternalResourceEntitlementIdFilter(cfg.externalResourceEntitlementIdFilter),
 				local.WithTargetedSyncResourceIDs(cfg.targetedSyncResourceIDs),
 				local.WithSkipEntitlementsAndGrants(cfg.skipEntitlementsAndGrants),
-				local.WithSkipGrants(cfg.skipGrants),
 				local.WithSyncResourceTypeIDs(cfg.syncResourceTypeIDs),
 			)
 			if err != nil {

@@ -303,10 +303,10 @@ func (m *GetManyRequest) validate(all bool) error {
 		errors = append(errors, err)
 	}
 
-	if l := len(m.GetKeys()); l < 1 || l > 100 {
+	if l := len(m.GetKeys()); l < 1 || l > 200 {
 		err := GetManyRequestValidationError{
 			field:  "Keys",
-			reason: "value must contain between 1 and 100 items, inclusive",
+			reason: "value must contain between 1 and 200 items, inclusive",
 		}
 		if !all {
 			return err
@@ -491,6 +491,8 @@ func (m *GetManyResponse) validate(all bool) error {
 		}
 
 	}
+
+	// no validation rules for PageToken
 
 	if len(errors) > 0 {
 		return GetManyResponseMultiError(errors)
@@ -1082,10 +1084,10 @@ func (m *SetRequest) validate(all bool) error {
 		errors = append(errors, err)
 	}
 
-	if len(m.GetValue()) > 35840 {
+	if len(m.GetValue()) > 1047552 {
 		err := SetRequestValidationError{
 			field:  "Value",
-			reason: "value length must be at most 35840 bytes",
+			reason: "value length must be at most 1047552 bytes",
 		}
 		if !all {
 			return err
@@ -1315,17 +1317,6 @@ func (m *SetManyRequest) validate(all bool) error {
 		errors = append(errors, err)
 	}
 
-	if l := len(m.GetValues()); l < 1 || l > 100 {
-		err := SetManyRequestValidationError{
-			field:  "Values",
-			reason: "value must contain between 1 and 100 pairs, inclusive",
-		}
-		if !all {
-			return err
-		}
-		errors = append(errors, err)
-	}
-
 	{
 		sorted_keys := make([]string, len(m.GetValues()))
 		i := 0
@@ -1349,10 +1340,10 @@ func (m *SetManyRequest) validate(all bool) error {
 				errors = append(errors, err)
 			}
 
-			if len(val) > 35840 {
+			if len(val) > 1047552 {
 				err := SetManyRequestValidationError{
 					field:  fmt.Sprintf("Values[%v]", key),
-					reason: "value length must be at most 35840 bytes",
+					reason: "value length must be at most 1047552 bytes",
 				}
 				if !all {
 					return err

@@ -242,10 +242,10 @@ func WithRatelimitData(resource *v2.RateLimitDescription) DoOption {
 			return err
 		}
 
-		resource.SetLimit(rl.GetLimit())
-		resource.SetRemaining(rl.GetRemaining())
-		resource.SetResetAt(rl.GetResetAt())
-		resource.SetStatus(rl.GetStatus())
+		resource.Limit = rl.Limit
+		resource.Remaining = rl.Remaining
+		resource.ResetAt = rl.ResetAt
+		resource.Status = rl.Status
 
 		return nil
 	}

@@ -38,17 +38,17 @@ func (c *bulkCreateTicketTaskHandler) HandleTask(ctx context.Context) error {
 
 	ticketRequests := make([]*v2.TicketsServiceCreateTicketRequest, 0)
 	for _, createTicketTask := range t.GetTicketRequests() {
-		ticketRequests = append(ticketRequests, v2.TicketsServiceCreateTicketRequest_builder{
+		ticketRequests = append(ticketRequests, &v2.TicketsServiceCreateTicketRequest{
 			Request:     createTicketTask.GetTicketRequest(),
 			Schema:      createTicketTask.GetTicketSchema(),
 			Annotations: createTicketTask.GetAnnotations(),
-		}.Build())
+		})
 	}
 
 	cc := c.helpers.ConnectorClient()
-	resp, err := cc.BulkCreateTickets(ctx, v2.TicketsServiceBulkCreateTicketsRequest_builder{
+	resp, err := cc.BulkCreateTickets(ctx, &v2.TicketsServiceBulkCreateTicketsRequest{
 		TicketRequests: ticketRequests,
-	}.Build())
+	})
 	if err != nil {
 		l.Error("failed bulk creating tickets", zap.Error(err))
 		return c.helpers.FinishTask(ctx, nil, nil, err)

@@ -32,9 +32,9 @@ func (m *localCredentialRotator) ShouldDebug() bool {
 func (m *localCredentialRotator) Next(ctx context.Context) (*v1.Task, time.Duration, error) {
 	var task *v1.Task
 	m.o.Do(func() {
-		task = v1.Task_builder{
-			RotateCredentials: &v1.Task_RotateCredentialsTask{},
-		}.Build()
+		task = &v1.Task{
+			TaskType: &v1.Task_RotateCredentials{},
+		}
 	})
 	return task, 0, nil
 }

@@ -61,14 +61,16 @@ func (j *JWKEncryptionProvider) marshalKey(ctx context.Context, privKeyJWK *jose
 		return nil, nil, err
 	}
 
-	return v2.EncryptionConfig_builder{
+	return &v2.EncryptionConfig{
 		Principal: nil,
 		Provider:  EncryptionProviderJwk, // TODO(morgabra): Fix the circular dependency/entire registry pattern.
 		KeyId:     kid,
-		JwkPublicKeyConfig: v2.EncryptionConfig_JWKPublicKeyConfig_builder{
-			PubKey: pubKeyJWKBytes,
-		}.Build(),
-	}.Build(), privKeyJWK, nil
+		Config: &v2.EncryptionConfig_JwkPublicKeyConfig{
+			JwkPublicKeyConfig: &v2.EncryptionConfig_JWKPublicKeyConfig{
+				PubKey: pubKeyJWKBytes,
+			},
+		},
+	}, privKeyJWK, nil
 }
 
 func (j *JWKEncryptionProvider) Encrypt(ctx context.Context, conf *v2.EncryptionConfig, plainText *v2.PlaintextData) (*v2.EncryptedData, error) {
@@ -80,17 +82,17 @@ func (j *JWKEncryptionProvider) Encrypt(ctx context.Context, conf *v2.Encryption
 	var ciphertext []byte
 	switch pubKey := jwk.Public().Key.(type) {
 	case ed25519.PublicKey:
-		ciphertext, err = EncryptED25519(pubKey, plainText.GetBytes())
+		ciphertext, err = EncryptED25519(pubKey, plainText.Bytes)
 		if err != nil {
 			return nil, err
 		}
 	case *ecdsa.PublicKey:
-		ciphertext, err = EncryptECDSA(pubKey, plainText.GetBytes())
+		ciphertext, err = EncryptECDSA(pubKey, plainText.Bytes)
 		if err != nil {
 			return nil, err
 		}
 	case *rsa.PublicKey:
-		ciphertext, err = EncryptRSA(pubKey, plainText.GetBytes())
+		ciphertext, err = EncryptRSA(pubKey, plainText.Bytes)
 		if err != nil {
 			return nil, err
 		}
@@ -105,19 +107,19 @@ func (j *JWKEncryptionProvider) Encrypt(ctx context.Context, conf *v2.Encryption
 
 	encCipherText := base64.StdEncoding.EncodeToString(ciphertext)
 
-	return v2.EncryptedData_builder{
+	return &v2.EncryptedData{
 		Provider:       EncryptionProviderJwk,
 		KeyId:          tp,
-		Name:           plainText.GetName(),
-		Description:    plainText.GetDescription(),
-		Schema:         plainText.GetSchema(),
+		Name:           plainText.Name,
+		Description:    plainText.Description,
+		Schema:         plainText.Schema,
 		EncryptedBytes: []byte(encCipherText),
 		KeyIds:         []string{tp},
-	}.Build(), nil
+	}, nil
 }
 
 func (j *JWKEncryptionProvider) Decrypt(ctx context.Context, cipherText *v2.EncryptedData, jwk *jose.JSONWebKey) (*v2.PlaintextData, error) {
-	decCipherText, err := base64.StdEncoding.DecodeString(string(cipherText.GetEncryptedBytes()))
+	decCipherText, err := base64.StdEncoding.DecodeString(string(cipherText.EncryptedBytes))
 	if err != nil {
 		return nil, fmt.Errorf("jwk: failed to decode encrypted bytes: %w", err)
 	}
@@ -143,12 +145,12 @@ func (j *JWKEncryptionProvider) Decrypt(ctx context.Context, cipherText *v2.Encr
 		return nil, ErrJWKUnsupportedKeyType
 	}
 
-	return v2.PlaintextData_builder{
-		Name:        cipherText.GetName(),
-		Description: cipherText.GetDescription(),
-		Schema:      cipherText.GetSchema(),
+	return &v2.PlaintextData{
+		Name:        cipherText.Name,
+		Description: cipherText.Description,
+		Schema:      cipherText.Schema,
 		Bytes:       plaintext,
-	}.Build(), nil
+	}, nil
 }
 
 func Thumbprint(jwk *jose.JSONWebKey) (string, error) {

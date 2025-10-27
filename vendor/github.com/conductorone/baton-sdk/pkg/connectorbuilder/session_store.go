@@ -21,6 +21,7 @@ func WithSyncId(ss sessions.SessionStore, syncID string) sessions.SessionStore {
 		syncID: syncID,
 	}
 }
+
 func (w *SessionStoreWithSyncID) Get(ctx context.Context, key string, opt ...sessions.SessionStoreOption) ([]byte, bool, error) {
 	opts := append([]sessions.SessionStoreOption{sessions.WithSyncID(w.syncID)}, opt...)
 	return w.ss.Get(ctx, key, opts...)
@@ -51,7 +52,7 @@ func (w *SessionStoreWithSyncID) Clear(ctx context.Context, opt ...sessions.Sess
 	return w.ss.Clear(ctx, opts...)
 }
 
-func (w *SessionStoreWithSyncID) GetAll(ctx context.Context, pageToken string, opt ...sessions.SessionStoreOption) (map[string][]byte, string, error) {
+func (w *SessionStoreWithSyncID) GetAll(ctx context.Context, opt ...sessions.SessionStoreOption) (map[string][]byte, error) {
 	opts := append([]sessions.SessionStoreOption{sessions.WithSyncID(w.syncID)}, opt...)
-	return w.ss.GetAll(ctx, pageToken, opts...)
+	return w.ss.GetAll(ctx, opts...)
 }

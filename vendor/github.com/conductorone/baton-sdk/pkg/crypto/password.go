@@ -67,12 +67,12 @@ func GenerateRandomPassword(randomPassword *v2.LocalCredentialOptions_RandomPass
 	}
 	var password strings.Builder
 
-	constraints := randomPassword.GetConstraints()
+	constraints := randomPassword.Constraints
 	if len(constraints) > 0 {
 		// apply constraints
 		for _, constraint := range constraints {
-			for i := int64(0); i < int64(constraint.GetMinCount()); i++ {
-				err := addCharacterToPassword(&password, constraint.GetCharSet())
+			for i := int64(0); i < int64(constraint.MinCount); i++ {
+				err := addCharacterToPassword(&password, constraint.CharSet)
 				if err != nil {
 					return "", err
 				}
