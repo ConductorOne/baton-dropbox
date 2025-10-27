@@ -88,9 +88,9 @@ jobs:
       BATON_LOG_LEVEL: debug
 
       # Connector-specific details
-      CONNECTOR_GRANT: 'role:pid_dbtmr:AAAAAFMcx6E0tax39Kb0H671TzWLeE07dwaqFQ5fDRy2:member:user:dbid:AADSHngsuonaSYR4BHryfeXi9A9CKQ1VOaI'
+      CONNECTOR_GRANT: 'role:pid_dbtmr:AAAAAFMcx6E0tax39Kb0H671TzWLeE07dwaqFQ5fDRy2:member:user:dbid:AADTy9uYmBrrkxEQ4sKa25BVjGYcNJh0oao'
       CONNECTOR_ENTITLEMENT: 'role:pid_dbtmr:AAAAAFMcx6E0tax39Kb0H671TzWLeE07dwaqFQ5fDRy2:member'
-      CONNECTOR_PRINCIPAL: 'dbid:AADSHngsuonaSYR4BHryfeXi9A9CKQ1VOaI'
+      CONNECTOR_PRINCIPAL: 'dbid:AADTy9uYmBrrkxEQ4sKa25BVjGYcNJh0oao'
       CONNECTOR_PRINCIPAL_TYPE: 'user'
 
       # Secrets for Baton authentication
