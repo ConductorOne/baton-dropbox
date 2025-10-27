@@ -17,7 +17,7 @@ func WithGroupProfile(profile map[string]interface{}) GroupTraitOption {
 			return err
 		}
 
-		gt.SetProfile(p)
+		gt.Profile = p
 
 		return nil
 	}
@@ -25,7 +25,7 @@ func WithGroupProfile(profile map[string]interface{}) GroupTraitOption {
 
 func WithGroupIcon(assetRef *v2.AssetRef) GroupTraitOption {
 	return func(gt *v2.GroupTrait) error {
-		gt.SetIcon(assetRef)
+		gt.Icon = assetRef
 		return nil
 	}
 }
@@ -47,7 +47,7 @@ func NewGroupTrait(opts ...GroupTraitOption) (*v2.GroupTrait, error) {
 // GetGroupTrait attempts to return the GroupTrait instance on a resource.
 func GetGroupTrait(resource *v2.Resource) (*v2.GroupTrait, error) {
 	ret := &v2.GroupTrait{}
-	annos := annotations.Annotations(resource.GetAnnotations())
+	annos := annotations.Annotations(resource.Annotations)
 	ok, err := annos.Pick(ret)
 	if err != nil {
 		return nil, err

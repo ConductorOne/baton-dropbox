@@ -40,15 +40,15 @@ func (c *bulkGetTicketTaskHandler) HandleTask(ctx context.Context) error {
 
 	ticketRequests := make([]*v2.TicketsServiceGetTicketRequest, 0)
 	for _, getTicketTask := range t.GetTicketRequests() {
-		ticketRequests = append(ticketRequests, v2.TicketsServiceGetTicketRequest_builder{
+		ticketRequests = append(ticketRequests, &v2.TicketsServiceGetTicketRequest{
 			Id:          getTicketTask.GetTicketId(),
 			Annotations: getTicketTask.GetAnnotations(),
-		}.Build())
+		})
 	}
 
-	resp, err := cc.BulkGetTickets(ctx, v2.TicketsServiceBulkGetTicketsRequest_builder{
+	resp, err := cc.BulkGetTickets(ctx, &v2.TicketsServiceBulkGetTicketsRequest{
 		TicketRequests: ticketRequests,
-	}.Build())
+	})
 	if err != nil {
 		return c.helpers.FinishTask(ctx, nil, nil, err)
 	}

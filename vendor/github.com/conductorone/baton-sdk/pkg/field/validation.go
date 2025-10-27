@@ -24,44 +24,44 @@ func ValidateIntRules(r *v1_conf.Int64Rules, vInt int, name string) error {
 		return nil
 	}
 	v := int64(vInt)
-	if r.GetIsRequired() && v == 0 {
+	if r.IsRequired && v == 0 {
 		return fmt.Errorf("field %s of type int is marked as required but it has a zero-value", name)
 	}
 
-	if !r.GetValidateEmpty() && v == 0 {
+	if !r.ValidateEmpty && v == 0 {
 		return nil
 	}
-	if r.HasEq() && r.GetEq() != v {
-		return fmt.Errorf("field %s: expected %v but got %v", name, r.GetEq(), v)
+	if r.Eq != nil && *r.Eq != v {
+		return fmt.Errorf("field %s: expected %v but got %v", name, *r.Eq, v)
 	}
-	if r.HasLt() && v >= r.GetLt() {
-		return fmt.Errorf("field %s: value must be less than %d but got %d", name, r.GetLt(), v)
+	if r.Lt != nil && v >= *r.Lt {
+		return fmt.Errorf("field %s: value must be less than %d but got %d", name, *r.Lt, v)
 	}
-	if r.HasLte() && v > r.GetLte() {
-		return fmt.Errorf("field %s: value must be less than or equal to %d but got %d", name, r.GetLte(), v)
+	if r.Lte != nil && v > *r.Lte {
+		return fmt.Errorf("field %s: value must be less than or equal to %d but got %d", name, *r.Lte, v)
 	}
-	if r.HasGt() && v <= r.GetGt() {
-		return fmt.Errorf("field %s: value must be greater than %d but got %d", name, r.GetGt(), v)
+	if r.Gt != nil && v <= *r.Gt {
+		return fmt.Errorf("field %s: value must be greater than %d but got %d", name, *r.Gt, v)
 	}
-	if r.HasGte() && v < r.GetGte() {
-		return fmt.Errorf("field %s: value must be greater than or equal to %d but got %d", name, r.GetGte(), v)
+	if r.Gte != nil && v < *r.Gte {
+		return fmt.Errorf("field %s: value must be greater than or equal to %d but got %d", name, *r.Gte, v)
 	}
-	if r.GetIn() != nil {
+	if r.In != nil {
 		found := false
-		for _, val := range r.GetIn() {
+		for _, val := range r.In {
 			if v == val {
 				found = true
 				break
 			}
 		}
 		if !found {
-			return fmt.Errorf("field %s: value must be one of %v but got %d", name, r.GetIn(), v)
+			return fmt.Errorf("field %s: value must be one of %v but got %d", name, r.In, v)
 		}
 	}
-	if r.GetNotIn() != nil {
-		for _, val := range r.GetNotIn() {
+	if r.NotIn != nil {
+		for _, val := range r.NotIn {
 			if v == val {
-				return fmt.Errorf("field %s: value must not be one of %v but got %d", name, r.GetNotIn(), v)
+				return fmt.Errorf("field %s: value must not be one of %v but got %d", name, r.NotIn, v)
 			}
 		}
 	}
@@ -72,8 +72,8 @@ func ValidateBoolRules(r *v1_conf.BoolRules, v bool, name string) error {
 	if r == nil {
 		return nil
 	}
-	if r.HasEq() && r.GetEq() != v {
-		return fmt.Errorf("expected %v but got %v", r.GetEq(), v)
+	if r.Eq != nil && *r.Eq != v {
+		return fmt.Errorf("expected %v but got %v", *r.Eq, v)
 	}
 	return nil
 }
@@ -134,28 +134,28 @@ func ValidateStringRules(r *v1_conf.StringRules, v string, name string) error {
 		return nil
 	}
 
-	if r.GetIsRequired() && v == "" {
+	if r.IsRequired && v == "" {
 		return fmt.Errorf("field %s of type string is marked as required but it has a zero-value", name)
 	}
 
-	if !r.GetValidateEmpty() && v == "" {
+	if !r.ValidateEmpty && v == "" {
 		return nil
 	}
 
-	if r.HasEq() && r.GetEq() != v {
-		return fmt.Errorf("field %s: expected '%v' but got '%v'", name, r.GetEq(), v)
+	if r.Eq != nil && *r.Eq != v {
+		return fmt.Errorf("field %s: expected '%v' but got '%v'", name, *r.Eq, v)
 	}
-	if r.HasLen() && uint64(len(v)) != r.GetLen() {
-		return fmt.Errorf("field %s: value must be exactly %d characters long but got %d", name, r.GetLen(), len(v))
+	if r.Len != nil && uint64(len(v)) != *r.Len {
+		return fmt.Errorf("field %s: value must be exactly %d characters long but got %d", name, *r.Len, len(v))
 	}
-	if r.HasMinLen() && uint64(len(v)) < r.GetMinLen() {
-		return fmt.Errorf("field %s: value must be at least %d characters long but got %d", name, r.GetMinLen(), len(v))
+	if r.MinLen != nil && uint64(len(v)) < *r.MinLen {
+		return fmt.Errorf("field %s: value must be at least %d characters long but got %d", name, *r.MinLen, len(v))
 	}
-	if r.HasMaxLen() && uint64(len(v)) > r.GetMaxLen() {
-		return fmt.Errorf("field %s: value must be at most %d characters long but got %d", name, r.GetMaxLen(), len(v))
+	if r.MaxLen != nil && uint64(len(v)) > *r.MaxLen {
+		return fmt.Errorf("field %s: value must be at most %d characters long but got %d", name, *r.MaxLen, len(v))
 	}
-	if r.HasPattern() {
-		pattern, err := regexp.CompilePOSIX(r.GetPattern())
+	if r.Pattern != nil {
+		pattern, err := regexp.CompilePOSIX(*r.Pattern)
 		if err != nil {
 			return fmt.Errorf("field %s: invalid pattern: %w", name, err)
 		}
@@ -163,39 +163,39 @@ func ValidateStringRules(r *v1_conf.StringRules, v string, name string) error {
 			return fmt.Errorf("field %s: value must match pattern %s but got '%s'", name, pattern.String(), v)
 		}
 	}
-	if r.HasPrefix() && !strings.HasPrefix(v, r.GetPrefix()) {
-		return fmt.Errorf("field %s: value must have prefix '%s' but got '%s'", name, r.GetPrefix(), v)
+	if r.Prefix != nil && !strings.HasPrefix(v, *r.Prefix) {
+		return fmt.Errorf("field %s: value must have prefix '%s' but got '%s'", name, *r.Prefix, v)
 	}
-	if r.HasSuffix() && !strings.HasSuffix(v, r.GetSuffix()) {
-		return fmt.Errorf("field %s: value must have suffix '%s' but got '%s'", name, r.GetSuffix(), v)
+	if r.Suffix != nil && !strings.HasSuffix(v, *r.Suffix) {
+		return fmt.Errorf("field %s: value must have suffix '%s' but got '%s'", name, *r.Suffix, v)
 	}
-	if r.HasContains() && !strings.Contains(v, r.GetContains()) {
-		return fmt.Errorf("field %s: value must contain '%s' but got '%s'", name, r.GetContains(), v)
+	if r.Contains != nil && !strings.Contains(v, *r.Contains) {
+		return fmt.Errorf("field %s: value must contain '%s' but got '%s'", name, *r.Contains, v)
 	}
-	if r.GetIn() != nil {
+	if r.In != nil {
 		found := false
-		for _, val := range r.GetIn() {
+		for _, val := range r.In {
 			if v == val {
 				found = true
 				break
 			}
 		}
 		if !found {
-			return fmt.Errorf("field %s: value must be one of %v but got '%s'", name, r.GetIn(), v)
+			return fmt.Errorf("field %s: value must be one of %v but got '%s'", name, r.In, v)
 		}
 	}
-	if r.GetNotIn() != nil {
-		for _, val := range r.GetNotIn() {
+	if r.NotIn != nil {
+		for _, val := range r.NotIn {
 			if v == val {
-				return fmt.Errorf("field %s: value must not be one of %v but got '%s'", name, r.GetNotIn(), v)
+				return fmt.Errorf("field %s: value must not be one of %v but got '%s'", name, r.NotIn, v)
 			}
 		}
 	}
-	if r.GetWellKnown() == v1_conf.WellKnownString_WELL_KNOWN_STRING_UNSPECIFIED {
+	if r.WellKnown == v1_conf.WellKnownString_WELL_KNOWN_STRING_UNSPECIFIED {
 		return nil
 	}
 
-	switch r.GetWellKnown() {
+	switch r.WellKnown {
 	case v1_conf.WellKnownString_WELL_KNOWN_STRING_EMAIL:
 		_, err := mail.ParseAddress(v)
 		if err != nil {
@@ -234,7 +234,7 @@ func ValidateStringRules(r *v1_conf.StringRules, v string, name string) error {
 		}
 
 	default:
-		return fmt.Errorf("field %s: unknown well-known validation rule: %T", name, r.GetWellKnown())
+		return fmt.Errorf("field %s: unknown well-known validation rule: %T", name, r.WellKnown)
 	}
 
 	return nil
@@ -256,21 +256,21 @@ func ValidateRepeatedStringRules(r *v1_conf.RepeatedStringRules, v []string, nam
 	if r == nil {
 		return nil
 	}
-	if r.GetIsRequired() && len(v) == 0 {
+	if r.IsRequired && len(v) == 0 {
 		return fmt.Errorf("field %s of type []string is marked as required but it has a zero-value", name)
 	}
 
-	if !r.GetValidateEmpty() && len(v) == 0 {
+	if !r.ValidateEmpty && len(v) == 0 {
 		return nil
 	}
 
-	if r.HasMinItems() && uint64(len(v)) < r.GetMinItems() {
-		return fmt.Errorf("field %s: value must have at least %d items but got %d", name, r.GetMinItems(), len(v))
+	if r.MinItems != nil && uint64(len(v)) < *r.MinItems {
+		return fmt.Errorf("field %s: value must have at least %d items but got %d", name, *r.MinItems, len(v))
 	}
-	if r.HasMaxItems() && uint64(len(v)) > r.GetMaxItems() {
-		return fmt.Errorf("field %s: value must have at most %d items but got %d", name, r.GetMaxItems(), len(v))
+	if r.MaxItems != nil && uint64(len(v)) > *r.MaxItems {
+		return fmt.Errorf("field %s: value must have at most %d items but got %d", name, *r.MaxItems, len(v))
 	}
-	if r.GetUnique() {
+	if r.Unique {
 		uniqueValues := make(map[string]struct{})
 		for _, item := range v {
 			if _, exists := uniqueValues[item]; exists {
@@ -279,12 +279,12 @@ func ValidateRepeatedStringRules(r *v1_conf.RepeatedStringRules, v []string, nam
 			uniqueValues[item] = struct{}{}
 		}
 	}
-	if !r.HasItemRules() {
+	if r.ItemRules == nil {
 		return nil
 	}
 
 	for i, item := range v {
-		if err := ValidateStringRules(r.GetItemRules(), item, strconv.Itoa(i)); err != nil {
+		if err := ValidateStringRules(r.ItemRules, item, strconv.Itoa(i)); err != nil {
 			return fmt.Errorf("field %s invalid item at %w", name, err)
 		}
 	}
@@ -295,11 +295,11 @@ func ValidateStringMapRules(r *v1_conf.StringMapRules, v map[string]any, name st
 	if r == nil {
 		return nil
 	}
-	if r.GetIsRequired() && len(v) == 0 {
+	if r.IsRequired && len(v) == 0 {
 		return fmt.Errorf("field %s of type map[string]any is marked as required but it has a zero-value", name)
 	}
 
-	if !r.GetValidateEmpty() && len(v) == 0 {
+	if !r.ValidateEmpty && len(v) == 0 {
 		return nil
 	}
 

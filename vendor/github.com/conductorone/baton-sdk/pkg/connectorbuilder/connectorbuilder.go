@@ -172,7 +172,7 @@ func NewConnector(ctx context.Context, in interface{}, opts ...Opt) (types.Conne
 	if cb, ok := in.(ConnectorBuilder); ok {
 		for _, rb := range cb.ResourceSyncers(ctx) {
 			rType := rb.ResourceType(ctx)
-			if err := addResourceType(ctx, rType.GetId(), rb); err != nil {
+			if err := addResourceType(ctx, rType.Id, rb); err != nil {
 				return nil, err
 			}
 		}
@@ -182,12 +182,13 @@ func NewConnector(ctx context.Context, in interface{}, opts ...Opt) (types.Conne
 	if cb2, ok := in.(ConnectorBuilderV2); ok {
 		for _, rb := range cb2.ResourceSyncers(ctx) {
 			rType := rb.ResourceType(ctx)
-			if err := addResourceType(ctx, rType.GetId(), rb); err != nil {
+			if err := addResourceType(ctx, rType.Id, rb); err != nil {
 				return nil, err
 			}
 		}
 		return b, nil
 	}
+
 	return nil, fmt.Errorf("input is not a ConnectorBuilder or a ConnectorBuilderV2")
 }
 
@@ -262,14 +263,14 @@ func (b *builder) GetMetadata(ctx context.Context, request *v2.ConnectorServiceG
 		return nil, err
 	}
 
-	annos := annotations.Annotations(md.GetAnnotations())
+	annos := annotations.Annotations(md.Annotations)
 	if b.ticketManager != nil {
-		annos.Append(v2.ExternalTicketSettings_builder{Enabled: b.ticketingEnabled}.Build())
+		annos.Append(&v2.ExternalTicketSettings{Enabled: b.ticketingEnabled})
 	}
-	md.SetAnnotations(annos)
+	md.Annotations = annos
 
 	b.m.RecordTaskSuccess(ctx, tt, b.nowFunc().Sub(start))
-	return v2.ConnectorServiceGetMetadataResponse_builder{Metadata: md}.Build(), nil
+	return &v2.ConnectorServiceGetMetadataResponse{Metadata: md}, nil
 }
 
 // Validate validates the connector.
@@ -286,10 +287,10 @@ func (b *builder) Validate(ctx context.Context, request *v2.ConnectorServiceVali
 	for {
 		annos, err := b.validateProvider.Validate(ctx)
 		if err == nil {
-			return v2.ConnectorServiceValidateResponse_builder{
+			return &v2.ConnectorServiceValidateResponse{
 				Annotations: annos,
 				SdkVersion:  sdk.Version,
-			}.Build(), nil
+			}, nil
 		}
 
 		if retryer.ShouldWaitAndRetry(ctx, err) {
@@ -305,7 +306,7 @@ func (b *builder) Cleanup(ctx context.Context, request *v2.ConnectorServiceClean
 	if b.sessionStore != nil {
 		// Limit c1z size before we upload, because the uploads time out...
 		//  TODO(kans): we could hold onto the session store if we are in debug mode.
-		err := b.sessionStore.Clear(ctx, sessions.WithSyncID(request.GetActiveSyncId()))
+		err := b.sessionStore.Clear(ctx, sessions.WithSyncID(request.ActiveSyncId))
 		if err != nil {
 			l.Warn("error clearing session store", zap.Error(err))
 		}
@@ -356,10 +357,10 @@ func (b *builder) getCapabilities(ctx context.Context) (*v2.ConnectorCapabilitie
 			connectorCaps[cap] = struct{}{}
 		}
 
-		resourceTypeCapabilities = append(resourceTypeCapabilities, v2.ResourceTypeCapability_builder{
+		resourceTypeCapabilities = append(resourceTypeCapabilities, &v2.ResourceTypeCapability{
 			ResourceType: rb.ResourceType(ctx),
 			Capabilities: caps,
-		}.Build())
+		})
 	}
 
 	// Check for account provisioning capability (global, not per resource type)
@@ -367,7 +368,7 @@ func (b *builder) getCapabilities(ctx context.Context) (*v2.ConnectorCapabilitie
 		connectorCaps[v2.Capability_CAPABILITY_ACCOUNT_PROVISIONING] = struct{}{}
 	}
 	sort.Slice(resourceTypeCapabilities, func(i, j int) bool {
-		return resourceTypeCapabilities[i].GetResourceType().GetId() < resourceTypeCapabilities[j].GetResourceType().GetId()
+		return resourceTypeCapabilities[i].ResourceType.GetId() < resourceTypeCapabilities[j].ResourceType.GetId()
 	})
 
 	if len(b.eventFeeds) > 0 {
@@ -393,30 +394,30 @@ func (b *builder) getCapabilities(ctx context.Context) (*v2.ConnectorCapabilitie
 		return nil, err
 	}
 
-	return v2.ConnectorCapabilities_builder{
+	return &v2.ConnectorCapabilities{
 		ResourceTypeCapabilities: resourceTypeCapabilities,
 		ConnectorCapabilities:    caps,
 		CredentialDetails:        credDetails,
-	}.Build(), nil
+	}, nil
 }
 
 func validateCapabilityDetails(_ context.Context, credDetails *v2.CredentialDetails) error {
-	if credDetails.HasCapabilityAccountProvisioning() {
+	if credDetails.CapabilityAccountProvisioning != nil {
 		// Ensure that the preferred option is included and is part of the supported options
-		if credDetails.GetCapabilityAccountProvisioning().GetPreferredCredentialOption() == v2.CapabilityDetailCredentialOption_CAPABILITY_DETAIL_CREDENTIAL_OPTION_UNSPECIFIED {
+		if credDetails.CapabilityAccountProvisioning.PreferredCredentialOption == v2.CapabilityDetailCredentialOption_CAPABILITY_DETAIL_CREDENTIAL_OPTION_UNSPECIFIED {
 			return status.Error(codes.InvalidArgument, "error: preferred credential creation option is not set")
 		}
-		if !slices.Contains(credDetails.GetCapabilityAccountProvisioning().GetSupportedCredentialOptions(), credDetails.GetCapabilityAccountProvisioning().GetPreferredCredentialOption()) {
+		if !slices.Contains(credDetails.CapabilityAccountProvisioning.SupportedCredentialOptions, credDetails.CapabilityAccountProvisioning.PreferredCredentialOption) {
 			return status.Error(codes.InvalidArgument, "error: preferred credential creation option is not part of the supported options")
 		}
 	}
 
-	if credDetails.HasCapabilityCredentialRotation() {
+	if credDetails.CapabilityCredentialRotation != nil {
 		// Ensure that the preferred option is included and is part of the supported options
-		if credDetails.GetCapabilityCredentialRotation().GetPreferredCredentialOption() == v2.CapabilityDetailCredentialOption_CAPABILITY_DETAIL_CREDENTIAL_OPTION_UNSPECIFIED {
+		if credDetails.CapabilityCredentialRotation.PreferredCredentialOption == v2.CapabilityDetailCredentialOption_CAPABILITY_DETAIL_CREDENTIAL_OPTION_UNSPECIFIED {
 			return status.Error(codes.InvalidArgument, "error: preferred credential rotation option is not set")
 		}
-		if !slices.Contains(credDetails.GetCapabilityCredentialRotation().GetSupportedCredentialOptions(), credDetails.GetCapabilityCredentialRotation().GetPreferredCredentialOption()) {
+		if !slices.Contains(credDetails.CapabilityCredentialRotation.SupportedCredentialOptions, credDetails.CapabilityCredentialRotation.PreferredCredentialOption) {
 			return status.Error(codes.InvalidArgument, "error: preferred credential rotation option is not part of the supported options")
 		}
 	}
@@ -435,7 +436,7 @@ func getCredentialDetails(ctx context.Context, b *builder) (*v2.CredentialDetail
 			l.Error("error: getting account provisioning details", zap.Error(err))
 			return nil, fmt.Errorf("error: getting account provisioning details: %w", err)
 		}
-		rv.SetCapabilityAccountProvisioning(accountProvisioningCapabilityDetails)
+		rv.CapabilityAccountProvisioning = accountProvisioningCapabilityDetails
 	}
 
 	// Check for credential rotation capability details
@@ -445,7 +446,7 @@ func getCredentialDetails(ctx context.Context, b *builder) (*v2.CredentialDetail
 			l.Error("error: getting credential management details", zap.Error(err))
 			return nil, fmt.Errorf("error: getting credential management details: %w", err)
 		}
-		rv.SetCapabilityCredentialRotation(credentialRotationCapabilityDetails)
+		rv.CapabilityCredentialRotation = credentialRotationCapabilityDetails
 		break // Only need one credential manager's details
 	}
 

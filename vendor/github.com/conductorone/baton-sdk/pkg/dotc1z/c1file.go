@@ -241,47 +241,47 @@ func (c *C1File) Stats(ctx context.Context, syncType connectorstore.SyncType, sy
 			return nil, err
 		}
 	}
-	resp, err := c.GetSync(ctx, reader_v2.SyncsReaderServiceGetSyncRequest_builder{SyncId: syncId}.Build())
+	resp, err := c.GetSync(ctx, &reader_v2.SyncsReaderServiceGetSyncRequest{SyncId: syncId})
 	if err != nil {
 		return nil, err
 	}
-	if resp == nil || !resp.HasSync() {
+	if resp == nil || resp.Sync == nil {
 		return nil, status.Errorf(codes.NotFound, "sync '%s' not found", syncId)
 	}
-	sync := resp.GetSync()
-	if syncType != connectorstore.SyncTypeAny && syncType != connectorstore.SyncType(sync.GetSyncType()) {
+	sync := resp.Sync
+	if syncType != connectorstore.SyncTypeAny && syncType != connectorstore.SyncType(sync.SyncType) {
 		return nil, status.Errorf(codes.InvalidArgument, "sync '%s' is not of type '%s'", syncId, syncType)
 	}
-	syncType = connectorstore.SyncType(sync.GetSyncType())
+	syncType = connectorstore.SyncType(sync.SyncType)
 
 	counts["resource_types"] = 0
 
 	var rtStats []*v2.ResourceType
 	pageToken := ""
 	for {
-		resp, err := c.ListResourceTypes(ctx, v2.ResourceTypesServiceListResourceTypesRequest_builder{PageToken: pageToken}.Build())
+		resp, err := c.ListResourceTypes(ctx, &v2.ResourceTypesServiceListResourceTypesRequest{PageToken: pageToken})
 		if err != nil {
 			return nil, err
 		}
 
-		rtStats = append(rtStats, resp.GetList()...)
+		rtStats = append(rtStats, resp.List...)
 
-		if resp.GetNextPageToken() == "" {
+		if resp.NextPageToken == "" {
 			break
 		}
 
-		pageToken = resp.GetNextPageToken()
+		pageToken = resp.NextPageToken
 	}
 	counts["resource_types"] = int64(len(rtStats))
 	for _, rt := range rtStats {
 		resourceCount, err := c.db.From(resources.Name()).
-			Where(goqu.C("resource_type_id").Eq(rt.GetId())).
+			Where(goqu.C("resource_type_id").Eq(rt.Id)).
 			Where(goqu.C("sync_id").Eq(syncId)).
 			CountContext(ctx)
 		if err != nil {
 			return nil, err
 		}
-		counts[rt.GetId()] = resourceCount
+		counts[rt.Id] = resourceCount
 	}
 
 	if syncType != connectorstore.SyncTypeResourcesOnly {
@@ -367,14 +367,14 @@ func (c *C1File) GrantStats(ctx context.Context, syncType connectorstore.SyncTyp
 			return nil, err
 		}
 	} else {
-		lastSync, err := c.GetSync(ctx, reader_v2.SyncsReaderServiceGetSyncRequest_builder{SyncId: syncId}.Build())
+		lastSync, err := c.GetSync(ctx, &reader_v2.SyncsReaderServiceGetSyncRequest{SyncId: syncId})
 		if err != nil {
 			return nil, err
 		}
 		if lastSync == nil {
 			return nil, status.Errorf(codes.NotFound, "sync '%s' not found", syncId)
 		}
-		if syncType != connectorstore.SyncTypeAny && syncType != connectorstore.SyncType(lastSync.GetSync().GetSyncType()) {
+		if syncType != connectorstore.SyncTypeAny && syncType != connectorstore.SyncType(lastSync.Sync.SyncType) {
 			return nil, status.Errorf(codes.InvalidArgument, "sync '%s' is not of type '%s'", syncId, syncType)
 		}
 	}
@@ -382,18 +382,18 @@ func (c *C1File) GrantStats(ctx context.Context, syncType connectorstore.SyncTyp
 	var allResourceTypes []*v2.ResourceType
 	pageToken := ""
 	for {
-		resp, err := c.ListResourceTypes(ctx, v2.ResourceTypesServiceListResourceTypesRequest_builder{PageToken: pageToken}.Build())
+		resp, err := c.ListResourceTypes(ctx, &v2.ResourceTypesServiceListResourceTypesRequest{PageToken: pageToken})
 		if err != nil {
 			return nil, err
 		}
 
-		allResourceTypes = append(allResourceTypes, resp.GetList()...)
+		allResourceTypes = append(allResourceTypes, resp.List...)
 
-		if resp.GetNextPageToken() == "" {
+		if resp.NextPageToken == "" {
 			break
 		}
 
-		pageToken = resp.GetNextPageToken()
+		pageToken = resp.NextPageToken
 	}
 
 	stats := make(map[string]int64)
@@ -401,13 +401,13 @@ func (c *C1File) GrantStats(ctx context.Context, syncType connectorstore.SyncTyp
 	for _, resourceType := range allResourceTypes {
 		grantsCount, err := c.db.From(grants.Name()).
 			Where(goqu.C("sync_id").Eq(syncId)).
-			Where(goqu.C("resource_type_id").Eq(resourceType.GetId())).
+			Where(goqu.C("resource_type_id").Eq(resourceType.Id)).
 			CountContext(ctx)
 		if err != nil {
 			return nil, err
 		}
 
-		stats[resourceType.GetId()] = grantsCount
+		stats[resourceType.Id] = grantsCount
 	}
 
 	return stats, nil

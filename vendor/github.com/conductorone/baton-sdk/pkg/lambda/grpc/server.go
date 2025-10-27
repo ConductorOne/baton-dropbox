@@ -63,12 +63,12 @@ func (r *TransportStream) Response() (*Response, error) {
 	}
 
 	return &Response{
-		msg: pbtransport.Response_builder{
+		msg: &pbtransport.Response{
 			Resp:     anyResp,
 			Status:   anyStatus,
 			Headers:  headers,
 			Trailers: trailers,
-		}.Build(),
+		},
 	}, nil
 }
 

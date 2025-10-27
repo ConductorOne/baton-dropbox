@@ -22,16 +22,16 @@ func (n *emptyConnector) ListResourceTypes(
 	request *v2.ResourceTypesServiceListResourceTypesRequest,
 	opts ...grpc.CallOption,
 ) (*v2.ResourceTypesServiceListResourceTypesResponse, error) {
-	return v2.ResourceTypesServiceListResourceTypesResponse_builder{
+	return &v2.ResourceTypesServiceListResourceTypesResponse{
 		List: []*v2.ResourceType{},
-	}.Build(), nil
+	}, nil
 }
 
 // ListResources returns a list of resources.
 func (n *emptyConnector) ListResources(ctx context.Context, request *v2.ResourcesServiceListResourcesRequest, opts ...grpc.CallOption) (*v2.ResourcesServiceListResourcesResponse, error) {
-	return v2.ResourcesServiceListResourcesResponse_builder{
+	return &v2.ResourcesServiceListResourcesResponse{
 		List: []*v2.Resource{},
-	}.Build(), nil
+	}, nil
 }
 
 func (n *emptyConnector) GetResource(
@@ -48,16 +48,16 @@ func (n *emptyConnector) ListEntitlements(
 	request *v2.EntitlementsServiceListEntitlementsRequest,
 	opts ...grpc.CallOption,
 ) (*v2.EntitlementsServiceListEntitlementsResponse, error) {
-	return v2.EntitlementsServiceListEntitlementsResponse_builder{
+	return &v2.EntitlementsServiceListEntitlementsResponse{
 		List: []*v2.Entitlement{},
-	}.Build(), nil
+	}, nil
 }
 
 // ListGrants returns a list of grants.
 func (n *emptyConnector) ListGrants(ctx context.Context, request *v2.GrantsServiceListGrantsRequest, opts ...grpc.CallOption) (*v2.GrantsServiceListGrantsResponse, error) {
-	return v2.GrantsServiceListGrantsResponse_builder{
+	return &v2.GrantsServiceListGrantsResponse{
 		List: []*v2.Grant{},
-	}.Build(), nil
+	}, nil
 }
 
 func (n *emptyConnector) Grant(ctx context.Context, request *v2.GrantManagerServiceGrantRequest, opts ...grpc.CallOption) (*v2.GrantManagerServiceGrantResponse, error) {
@@ -70,7 +70,7 @@ func (n *emptyConnector) Revoke(ctx context.Context, request *v2.GrantManagerSer
 
 // GetMetadata returns a connector metadata.
 func (n *emptyConnector) GetMetadata(ctx context.Context, request *v2.ConnectorServiceGetMetadataRequest, opts ...grpc.CallOption) (*v2.ConnectorServiceGetMetadataResponse, error) {
-	return v2.ConnectorServiceGetMetadataResponse_builder{Metadata: &v2.ConnectorMetadata{}}.Build(), nil
+	return &v2.ConnectorServiceGetMetadataResponse{Metadata: &v2.ConnectorMetadata{}}, nil
 }
 
 // Validate is called by the connector framework to validate the correct response.
@@ -83,9 +83,9 @@ func (n *emptyConnector) BulkCreateTickets(ctx context.Context, request *v2.Tick
 }
 
 func (n *emptyConnector) BulkGetTickets(ctx context.Context, request *v2.TicketsServiceBulkGetTicketsRequest, opts ...grpc.CallOption) (*v2.TicketsServiceBulkGetTicketsResponse, error) {
-	return v2.TicketsServiceBulkGetTicketsResponse_builder{
+	return &v2.TicketsServiceBulkGetTicketsResponse{
 		Tickets: []*v2.TicketsServiceGetTicketResponse{},
-	}.Build(), nil
+	}, nil
 }
 
 func (n *emptyConnector) CreateTicket(ctx context.Context, request *v2.TicketsServiceCreateTicketRequest, opts ...grpc.CallOption) (*v2.TicketsServiceCreateTicketResponse, error) {
@@ -97,9 +97,9 @@ func (n *emptyConnector) GetTicket(ctx context.Context, request *v2.TicketsServi
 }
 
 func (n *emptyConnector) ListTicketSchemas(ctx context.Context, request *v2.TicketsServiceListTicketSchemasRequest, opts ...grpc.CallOption) (*v2.TicketsServiceListTicketSchemasResponse, error) {
-	return v2.TicketsServiceListTicketSchemasResponse_builder{
+	return &v2.TicketsServiceListTicketSchemasResponse{
 		List: []*v2.TicketSchema{},
-	}.Build(), nil
+	}, nil
 }
 
 func (n *emptyConnector) GetTicketSchema(ctx context.Context, request *v2.TicketsServiceGetTicketSchemaRequest, opts ...grpc.CallOption) (*v2.TicketsServiceGetTicketSchemaResponse, error) {
@@ -143,21 +143,21 @@ func (n *emptyConnector) InvokeAction(ctx context.Context, request *v2.InvokeAct
 }
 
 func (n *emptyConnector) ListActionSchemas(ctx context.Context, request *v2.ListActionSchemasRequest, opts ...grpc.CallOption) (*v2.ListActionSchemasResponse, error) {
-	return v2.ListActionSchemasResponse_builder{
+	return &v2.ListActionSchemasResponse{
 		Schemas: []*v2.BatonActionSchema{},
-	}.Build(), nil
+	}, nil
 }
 
 func (n *emptyConnector) ListEvents(ctx context.Context, request *v2.ListEventsRequest, opts ...grpc.CallOption) (*v2.ListEventsResponse, error) {
-	return v2.ListEventsResponse_builder{
+	return &v2.ListEventsResponse{
 		Events: []*v2.Event{},
-	}.Build(), nil
+	}, nil
 }
 
 func (n *emptyConnector) ListEventFeeds(ctx context.Context, request *v2.ListEventFeedsRequest, opts ...grpc.CallOption) (*v2.ListEventFeedsResponse, error) {
-	return v2.ListEventFeedsResponse_builder{
+	return &v2.ListEventFeedsResponse{
 		List: []*v2.EventFeedMetadata{},
-	}.Build(), nil
+	}, nil
 }
 
 // NewEmptyConnector returns a new emptyConnector.

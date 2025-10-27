@@ -55,17 +55,17 @@ func createSigv4STSGetCallerIdentityRequest(ctx context.Context, cfg *aws.Config
 	for signedHeaderKey, signedHeaderValues := range req.Header {
 		v := make([]string, len(signedHeaderValues))
 		copy(v, signedHeaderValues)
-		signedHeader := pb_connector_manager.SignedHeader_builder{
+		signedHeader := &pb_connector_manager.SignedHeader{
 			Key:   signedHeaderKey,
 			Value: v,
-		}.Build()
+		}
 		signedHeaders = append(signedHeaders, signedHeader)
 	}
 
-	return pb_connector_manager.Sigv4SignedRequestSTSGetCallerIdentity_builder{
+	return &pb_connector_manager.Sigv4SignedRequestSTSGetCallerIdentity{
 		Method:   method,
 		Endpoint: endpoint,
 		Headers:  signedHeaders,
 		Body:     []byte(body),
-	}.Build(), nil
+	}, nil
 }

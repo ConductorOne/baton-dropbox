@@ -44,9 +44,9 @@ func (c *listTicketSchemasTaskHandler) HandleTask(ctx context.Context) error {
 	var err error
 	pageToken := ""
 	for {
-		schemas, err := cc.ListTicketSchemas(ctx, v2.TicketsServiceListTicketSchemasRequest_builder{
+		schemas, err := cc.ListTicketSchemas(ctx, &v2.TicketsServiceListTicketSchemasRequest{
 			PageToken: pageToken,
-		}.Build())
+		})
 		if err != nil {
 			return err
 		}
@@ -81,10 +81,10 @@ func (c *listTicketSchemasTaskHandler) HandleTask(ctx context.Context) error {
 		return c.helpers.FinishTask(ctx, nil, nil, err)
 	}
 
-	resp := v2.TicketsServiceListTicketSchemasResponse_builder{
+	resp := &v2.TicketsServiceListTicketSchemasResponse{
 		List:          ticketSchemas,
 		NextPageToken: "",
-	}.Build()
+	}
 
 	return c.helpers.FinishTask(ctx, resp, resp.GetAnnotations(), nil)
 }

@@ -91,16 +91,16 @@ func (b *builder) CreateAccount(ctx context.Context, request *v2.CreateAccountRe
 		encryptedDatas = append(encryptedDatas, encryptedData...)
 	}
 
-	rv := v2.CreateAccountResponse_builder{
+	rv := &v2.CreateAccountResponse{
 		EncryptedData: encryptedDatas,
 		Annotations:   annos,
-	}.Build()
+	}
 
 	switch r := result.(type) {
 	case *v2.CreateAccountResponse_SuccessResult:
-		rv.SetSuccess(proto.ValueOrDefault(r))
+		rv.Result = &v2.CreateAccountResponse_Success{Success: r}
 	case *v2.CreateAccountResponse_ActionRequiredResult:
-		rv.SetActionRequired(proto.ValueOrDefault(r))
+		rv.Result = &v2.CreateAccountResponse_ActionRequired{ActionRequired: r}
 	default:
 		b.m.RecordTaskFailure(ctx, tt, b.nowFunc().Sub(start))
 		return nil, status.Error(codes.Unimplemented, fmt.Sprintf("unknown result type: %T", result))

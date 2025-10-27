@@ -11,7 +11,7 @@ import (
 
 // ClientConfig takes a credential and returns a TLS configuration that can be used to connect to a server.
 func ClientConfig(ctx context.Context, cred *v1.Credential) (*tls.Config, error) {
-	caCert, err := x509.ParseCertificate(cred.GetCaCert())
+	caCert, err := x509.ParseCertificate(cred.CaCert)
 	if err != nil {
 		return nil, err
 	}
@@ -20,15 +20,15 @@ func ClientConfig(ctx context.Context, cred *v1.Credential) (*tls.Config, error)
 	pool.AddCert(caCert)
 
 	// Validate that we have a valid certificate
-	_, err = x509.ParseCertificate(cred.GetCert())
+	_, err = x509.ParseCertificate(cred.Cert)
 	if err != nil {
 		return nil, err
 	}
 
 	var tlsCert tls.Certificate
 
-	tlsCert.Certificate = append(tlsCert.Certificate, cred.GetCert())
-	tlsCert.PrivateKey = ed25519.PrivateKey(cred.GetKey())
+	tlsCert.Certificate = append(tlsCert.Certificate, cred.Cert)
+	tlsCert.PrivateKey = ed25519.PrivateKey(cred.Key)
 
 	return &tls.Config{
 		ServerName:   "127.0.0.1",

@@ -15,7 +15,7 @@ type UserTraitOption func(ut *v2.UserTrait) error
 
 func WithStatus(status v2.UserTrait_Status_Status) UserTraitOption {
 	return func(ut *v2.UserTrait) error {
-		ut.SetStatus(v2.UserTrait_Status_builder{Status: status}.Build())
+		ut.Status = &v2.UserTrait_Status{Status: status}
 
 		return nil
 	}
@@ -23,7 +23,7 @@ func WithStatus(status v2.UserTrait_Status_Status) UserTraitOption {
 
 func WithDetailedStatus(status v2.UserTrait_Status_Status, details string) UserTraitOption {
 	return func(ut *v2.UserTrait) error {
-		ut.SetStatus(v2.UserTrait_Status_builder{Status: status, Details: details}.Build())
+		ut.Status = &v2.UserTrait_Status{Status: status, Details: details}
 
 		return nil
 	}
@@ -35,12 +35,12 @@ func WithEmail(email string, primary bool) UserTraitOption {
 			return nil
 		}
 
-		traitEmail := v2.UserTrait_Email_builder{
+		traitEmail := &v2.UserTrait_Email{
 			Address:   email,
 			IsPrimary: primary,
-		}.Build()
+		}
 
-		ut.SetEmails(append(ut.GetEmails(), traitEmail))
+		ut.Emails = append(ut.Emails, traitEmail)
 
 		return nil
 	}
@@ -52,22 +52,22 @@ func WithUserLogin(login string, aliases ...string) UserTraitOption {
 			// If login is empty do nothing
 			return nil
 		}
-		ut.SetLogin(login)
-		ut.SetLoginAliases(aliases)
+		ut.Login = login
+		ut.LoginAliases = aliases
 		return nil
 	}
 }
 
 func WithEmployeeID(employeeIDs ...string) UserTraitOption {
 	return func(ut *v2.UserTrait) error {
-		ut.SetEmployeeIds(employeeIDs)
+		ut.EmployeeIds = employeeIDs
 		return nil
 	}
 }
 
 func WithUserIcon(assetRef *v2.AssetRef) UserTraitOption {
 	return func(ut *v2.UserTrait) error {
-		ut.SetIcon(assetRef)
+		ut.Icon = assetRef
 
 		return nil
 	}
@@ -80,7 +80,7 @@ func WithUserProfile(profile map[string]interface{}) UserTraitOption {
 			return err
 		}
 
-		ut.SetProfile(p)
+		ut.Profile = p
 
 		return nil
 	}
@@ -88,42 +88,42 @@ func WithUserProfile(profile map[string]interface{}) UserTraitOption {
 
 func WithAccountType(accountType v2.UserTrait_AccountType) UserTraitOption {
 	return func(ut *v2.UserTrait) error {
-		ut.SetAccountType(accountType)
+		ut.AccountType = accountType
 		return nil
 	}
 }
 
 func WithCreatedAt(createdAt time.Time) UserTraitOption {
 	return func(ut *v2.UserTrait) error {
-		ut.SetCreatedAt(timestamppb.New(createdAt))
+		ut.CreatedAt = timestamppb.New(createdAt)
 		return nil
 	}
 }
 
 func WithLastLogin(lastLogin time.Time) UserTraitOption {
 	return func(ut *v2.UserTrait) error {
-		ut.SetLastLogin(timestamppb.New(lastLogin))
+		ut.LastLogin = timestamppb.New(lastLogin)
 		return nil
 	}
 }
 
 func WithMFAStatus(mfaStatus *v2.UserTrait_MFAStatus) UserTraitOption {
 	return func(ut *v2.UserTrait) error {
-		ut.SetMfaStatus(mfaStatus)
+		ut.MfaStatus = mfaStatus
 		return nil
 	}
 }
 
 func WithSSOStatus(ssoStatus *v2.UserTrait_SSOStatus) UserTraitOption {
 	return func(ut *v2.UserTrait) error {
-		ut.SetSsoStatus(ssoStatus)
+		ut.SsoStatus = ssoStatus
 		return nil
 	}
 }
 
 func WithStructuredName(structuredName *v2.UserTrait_StructuredName) UserTraitOption {
 	return func(ut *v2.UserTrait) error {
-		ut.SetStructuredName(structuredName)
+		ut.StructuredName = structuredName
 		return nil
 	}
 }
@@ -140,13 +140,13 @@ func NewUserTrait(opts ...UserTraitOption) (*v2.UserTrait, error) {
 	}
 
 	// If no status was set, default to be enabled.
-	if !userTrait.HasStatus() {
-		userTrait.SetStatus(v2.UserTrait_Status_builder{Status: v2.UserTrait_Status_STATUS_ENABLED}.Build())
+	if userTrait.Status == nil {
+		userTrait.Status = &v2.UserTrait_Status{Status: v2.UserTrait_Status_STATUS_ENABLED}
 	}
 
 	// If account type isn't specified, default to a human user.
-	if userTrait.GetAccountType() == v2.UserTrait_ACCOUNT_TYPE_UNSPECIFIED {
-		userTrait.SetAccountType(v2.UserTrait_ACCOUNT_TYPE_HUMAN)
+	if userTrait.AccountType == v2.UserTrait_ACCOUNT_TYPE_UNSPECIFIED {
+		userTrait.AccountType = v2.UserTrait_ACCOUNT_TYPE_HUMAN
 	}
 
 	return userTrait, nil
@@ -155,7 +155,7 @@ func NewUserTrait(opts ...UserTraitOption) (*v2.UserTrait, error) {
 // GetUserTrait attempts to return the UserTrait instance on a resource.
 func GetUserTrait(resource *v2.Resource) (*v2.UserTrait, error) {
 	ret := &v2.UserTrait{}
-	annos := annotations.Annotations(resource.GetAnnotations())
+	annos := annotations.Annotations(resource.Annotations)
 	ok, err := annos.Pick(ret)
 	if err != nil {
 		return nil, err

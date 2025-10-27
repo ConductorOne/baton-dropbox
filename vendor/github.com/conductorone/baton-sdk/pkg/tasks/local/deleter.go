@@ -32,9 +32,9 @@ func (m *localResourceDeleter) ShouldDebug() bool {
 func (m *localResourceDeleter) Next(ctx context.Context) (*v1.Task, time.Duration, error) {
 	var task *v1.Task
 	m.o.Do(func() {
-		task = v1.Task_builder{
-			DeleteResource: &v1.Task_DeleteResourceTask{},
-		}.Build()
+		task = &v1.Task{
+			TaskType: &v1.Task_DeleteResource{},
+		}
 	})
 	return task, 0, nil
 }

@@ -3,25 +3,23 @@ package session
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"github.com/conductorone/baton-sdk/pkg/types/sessions"
 )
 
-// See GRPC validation rules for eg GetManyRequest.
-
 func GetManyJSON[T any](ctx context.Context, ss sessions.SessionStore, keys []string, opt ...sessions.SessionStoreOption) (map[string]T, error) {
-	allBytes, err := UnrollGetMany(ctx, ss, keys, opt...)
+	// Get the raw bytes from cache
+	rawMap, err := ss.GetMany(ctx, keys, opt...)
 	if err != nil {
 		return nil, err
 	}
-
 	result := make(map[string]T)
-	for key, bytes := range allBytes {
+	// Unmarshal each item to the generic type
+	for key, bytes := range rawMap {
 		var item T
 		err = json.Unmarshal(bytes, &item)
 		if err != nil {
-			return nil, fmt.Errorf("failed to unmarshal item for key %s: %w", key, err)
+			return nil, err
 		}
 		result[key] = item
 	}
@@ -30,17 +28,18 @@ func GetManyJSON[T any](ctx context.Context, ss sessions.SessionStore, keys []st
 }
 
 func SetManyJSON[T any](ctx context.Context, ss sessions.SessionStore, items map[string]T, opt ...sessions.SessionStoreOption) error {
+	// Marshal each item to JSON bytes
 	bytesMap := make(map[string][]byte)
-
 	for key, item := range items {
 		bytes, err := json.Marshal(item)
 		if err != nil {
-			return fmt.Errorf("failed to marshal item for key %s: %w", key, err)
+			return err
 		}
 		bytesMap[key] = bytes
 	}
 
-	return UnrollSetMany(ctx, ss, bytesMap, opt...)
+	// Store in cache
+	return ss.SetMany(ctx, bytesMap, opt...)
 }
 
 func GetJSON[T any](ctx context.Context, ss sessions.SessionStore, key string, opt ...sessions.SessionStoreOption) (T, bool, error) {
@@ -82,28 +81,21 @@ func ClearJSON(ctx context.Context, ss sessions.SessionStore, opt ...sessions.Se
 }
 
 func GetAllJSON[T any](ctx context.Context, ss sessions.SessionStore, opt ...sessions.SessionStoreOption) (map[string]T, error) {
+	rawMap, err := ss.GetAll(ctx, opt...)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get all raw bytes from cache
 	result := make(map[string]T)
-	pageToken := ""
-	for {
-		rawMap, nextPageToken, err := ss.GetAll(ctx, pageToken, opt...)
+	// Unmarshal each item to the generic type
+	for key, bytes := range rawMap {
+		var item T
+		err = json.Unmarshal(bytes, &item)
 		if err != nil {
 			return nil, err
 		}
-		for key, bytes := range rawMap {
-			var item T
-			err = json.Unmarshal(bytes, &item)
-			if err != nil {
-				return nil, err
-			}
-			result[key] = item
-		}
-		if nextPageToken == "" {
-			break
-		}
-		if pageToken == nextPageToken {
-			return nil, fmt.Errorf("page token is the same as the next page token")
-		}
-		pageToken = nextPageToken
+		result[key] = item
 	}
 
 	return result, nil
