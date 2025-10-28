@@ -24,6 +24,7 @@ var (
 		field.WithIsSecret(true),
 		field.WithDescription("The refresh token used to get an access token for authentication with Dropbox"),
 		field.WithRequired(false),
+		field.WithExportTarget(field.ExportTargetCLIOnly),
 	)
 	ConfigureField = field.BoolField(
 		"configure",
@@ -32,6 +33,8 @@ var (
 		field.WithRequired(false),
 		field.WithExportTarget(field.ExportTargetCLIOnly),
 	)
+
+	// /
 	// ConfigurationFields defines the external configuration required for the
 	// connector to run. Note: these fields can be marked as optional or
 	// required.

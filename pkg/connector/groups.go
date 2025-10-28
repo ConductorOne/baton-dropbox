@@ -7,7 +7,6 @@ import (
 	"github.com/conductorone/baton-dropbox/pkg/connector/dropbox"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
-	"github.com/conductorone/baton-sdk/pkg/pagination"
 	"github.com/conductorone/baton-sdk/pkg/types/entitlement"
 	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	resourceSdk "github.com/conductorone/baton-sdk/pkg/types/resource"
@@ -43,9 +42,10 @@ func (o *groupBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 	return groupResourceType
 }
 
-func (o *groupBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+func (o *groupBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, attr resourceSdk.SyncOpAttrs) ([]*v2.Resource, *resourceSdk.SyncOpResults, error) {
 	logger := ctxzap.Extract(ctx)
-	logger.Debug("Starting Groups List", zap.String("token", pToken.Token))
+	token := attr.PageToken.Token
+	logger.Debug("Starting Groups List", zap.String("token", token))
 	outResources := []*v2.Resource{}
 
 	var payload *dropbox.ListGroupsPayload
@@ -53,22 +53,26 @@ func (o *groupBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId
 	var err error
 	var limit = 100
 
-	if pToken.Token == "" {
+	if token == "" {
 		payload, rateLimitData, err = o.ListGroups(ctx, limit)
 	} else {
-		payload, rateLimitData, err = o.ListGroupsContinue(ctx, pToken.Token)
+		payload, rateLimitData, err = o.ListGroupsContinue(ctx, token)
 	}
 
 	var outAnnotations annotations.Annotations
 	outAnnotations.WithRateLimiting(rateLimitData)
 	if err != nil {
-		return nil, "", outAnnotations, fmt.Errorf("error listing groups: %w", err)
+		return nil, &resourceSdk.SyncOpResults{
+			Annotations: outAnnotations,
+		}, fmt.Errorf("error listing groups: %w", err)
 	}
 
 	for _, group := range payload.Groups {
 		groupResource, err := groupResource(group, parentResourceID)
 		if err != nil {
-			return nil, "", outAnnotations, err
+			return nil, &resourceSdk.SyncOpResults{
+				Annotations: outAnnotations,
+			}, err
 		}
 		outResources = append(outResources, groupResource)
 	}
@@ -78,11 +82,14 @@ func (o *groupBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId
 		cursor = payload.Cursor
 	}
 
-	return outResources, cursor, outAnnotations, nil
+	return outResources, &resourceSdk.SyncOpResults{
+		NextPageToken: cursor,
+		Annotations:   outAnnotations,
+	}, nil
 }
 
 // Entitlements always returns an empty slice for roles.
-func (o *groupBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
+func (o *groupBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ resourceSdk.SyncOpAttrs) ([]*v2.Entitlement, *resourceSdk.SyncOpResults, error) {
 	return []*v2.Entitlement{
 		entitlement.NewAssignmentEntitlement(
 			resource,
@@ -98,31 +105,36 @@ func (o *groupBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ 
 			entitlement.WithDescription(fmt.Sprintf("Owner of %s dropbox group", resource.DisplayName)),
 			entitlement.WithDisplayName(fmt.Sprintf("%s group %s", resource.DisplayName, groupOwner)),
 		),
-	}, "", nil, nil
+	}, nil, nil
 }
 
-func (o *groupBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
+func (o *groupBuilder) Grants(ctx context.Context, resource *v2.Resource, attr resourceSdk.SyncOpAttrs) ([]*v2.Grant, *resourceSdk.SyncOpResults, error) {
 	var outGrants []*v2.Grant
 	var payload *dropbox.ListGroupMembersPayload
 	var err error
 	var rateLimitData *v2.RateLimitDescription
 
-	if pToken.Token == "" {
+	token := attr.PageToken.Token
+	if token == "" {
 		payload, rateLimitData, err = o.ListGroupMembers(ctx, resource.Id.Resource, 0)
 	} else {
-		payload, rateLimitData, err = o.ListGroupMembersContinue(ctx, pToken.Token)
+		payload, rateLimitData, err = o.ListGroupMembersContinue(ctx, token)
 	}
 
 	var outAnnotations annotations.Annotations
 	outAnnotations.WithRateLimiting(rateLimitData)
 	if err != nil {
-		return nil, "", outAnnotations, fmt.Errorf("error listing group members: %w", err)
+		return nil, &resourceSdk.SyncOpResults{
+			Annotations: outAnnotations,
+		}, fmt.Errorf("error listing group members: %w", err)
 	}
 
 	for _, user := range payload.Members {
 		principalId, err := resourceSdk.NewResourceID(userResourceType, user.Profile.AccountID)
 		if err != nil {
-			return nil, "", outAnnotations, fmt.Errorf("error creating principal ID: %w", err)
+			return nil, &resourceSdk.SyncOpResults{
+				Annotations: outAnnotations,
+			}, fmt.Errorf("error creating principal ID: %w", err)
 		}
 
 		var nextGrant *v2.Grant
@@ -148,7 +160,10 @@ func (o *groupBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken
 		cursor = payload.Cursor
 	}
 
-	return outGrants, cursor, outAnnotations, nil
+	return outGrants, &resourceSdk.SyncOpResults{
+		NextPageToken: cursor,
+		Annotations:   outAnnotations,
+	}, nil
 }
 
 func newGroupBuilder(client *dropbox.Client) *groupBuilder {
