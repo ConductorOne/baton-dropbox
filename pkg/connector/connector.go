@@ -100,7 +100,7 @@ func NewLambdaConnector(ctx context.Context, dropboxCfg *cfg.Dropbox, cliOpts *c
 
 	cb, err := New(ctx, opts)
 	if err != nil {
-		l.Error("error creating connector", zap.Error(err))
+		l.Error("error creating connectors", zap.Error(err))
 		return nil, nil, err
 	}
 	return cb, nil, nil
