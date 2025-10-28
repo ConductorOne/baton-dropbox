@@ -34,11 +34,7 @@ var (
 		field.WithExportTarget(field.ExportTargetCLIOnly),
 	)
 
-	Oauth2TokenField = field.Oauth2Field(
-		"oauth2-token",
-		field.WithDisplayName("OAuth Authentication"),
-		field.WithDescription("The OAuth Authentications"),
-	)
+	// /
 	// ConfigurationFields defines the external configuration required for the
 	// connector to run. Note: these fields can be marked as optional or
 	// required.
@@ -47,7 +43,6 @@ var (
 		AppSecret,
 		RefreshTokenField,
 		ConfigureField,
-		Oauth2TokenField,
 	}
 )
 
