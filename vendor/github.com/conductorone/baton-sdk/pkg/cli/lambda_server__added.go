@@ -14,6 +14,7 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/crypto"
 	"github.com/conductorone/baton-sdk/pkg/crypto/providers/jwk"
 	"github.com/conductorone/baton-sdk/pkg/logging"
+	"github.com/conductorone/baton-sdk/pkg/session"
 	"github.com/conductorone/baton-sdk/pkg/ugrpc"
 	"github.com/go-jose/go-jose/v4"
 	"github.com/mitchellh/mapstructure"
@@ -30,7 +31,6 @@ import (
 	c1_lambda_grpc "github.com/conductorone/baton-sdk/pkg/lambda/grpc"
 	c1_lambda_config "github.com/conductorone/baton-sdk/pkg/lambda/grpc/config"
 	"github.com/conductorone/baton-sdk/pkg/lambda/grpc/middleware"
-	"github.com/conductorone/baton-sdk/pkg/session"
 	"github.com/conductorone/baton-sdk/pkg/types/sessions"
 	"google.golang.org/grpc"
 )
@@ -195,7 +195,7 @@ func OptionallyAddLambdaCommand[T field.Configurable](
 			ops.TokenSource = &lambdaTokenSource{
 				ctx:    runCtx,
 				webKey: webKey,
-				client: v1.NewConnectorOauthTokenServiceClient(grpcClient),
+				client: configClient,
 			}
 		}
 		c, err := getconnector(runCtx, t, ops)
@@ -248,14 +248,14 @@ func createSessionCacheConstructor(grpcClient grpc.ClientConnInterface) sessions
 		// Create the gRPC session client using the same gRPC connection
 		client := v1.NewBatonSessionServiceClient(grpcClient)
 		// Create and return the session cache
-		return session.NewGRPCSessionCache(ctx, client, opt...)
+		return session.NewGRPCSessionStore(ctx, client, opt...)
 	}
 }
 
 type lambdaTokenSource struct {
 	ctx    context.Context
 	webKey *jose.JSONWebKey
-	client v1.ConnectorOauthTokenServiceClient
+	client v1.ConnectorConfigServiceClient
 }
 
 func (s *lambdaTokenSource) Token() (*oauth2.Token, error) {
