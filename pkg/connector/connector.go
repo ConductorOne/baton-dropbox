@@ -84,17 +84,19 @@ func NewLambdaConnector(ctx context.Context, dropboxCfg *cfg.Dropbox, cliOpts *c
 
 	l := ctxzap.Extract(ctx)
 
-	opts := WithRefreshToken(
-		ctx,
-		dropboxCfg.AppKey,
-		dropboxCfg.AppSecret,
-		dropboxCfg.RefreshToken,
-	)
+	var opts Option
 	if dropboxCfg.RefreshToken == "" {
 		opts = WithTokenSource(
 			ctx,
 			dropboxCfg.AppKey,
 			cliOpts.TokenSource,
+		)
+	} else {
+		opts = WithRefreshToken(
+			ctx,
+			dropboxCfg.AppKey,
+			dropboxCfg.AppSecret,
+			dropboxCfg.RefreshToken,
 		)
 	}
 
