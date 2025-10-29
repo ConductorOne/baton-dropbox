@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
@@ -44,15 +45,41 @@ func (c *Client) AddRoleToUser(ctx context.Context, roleId, email string) (*v2.R
 		uhttp.WithRatelimitData(&ratelimitData),
 	)
 
+	defer func() {
+		if res != nil && res.Body != nil {
+			res.Body.Close()
+		}
+	}()
+
+	// Check if the error indicates the user already has the role - treat as idempotent success
+	if res != nil && res.StatusCode == http.StatusConflict {
+		bodyBytes, readErr := io.ReadAll(res.Body)
+		if readErr == nil {
+			var errorResp struct {
+				ErrorSummary string `json:"error_summary"`
+				Error        struct {
+					Tag string `json:".tag"`
+				} `json:"error"`
+			}
+			if jsonErr := json.Unmarshal(bodyBytes, &errorResp); jsonErr == nil {
+				// Treat certain errors as idempotent (user already has the role)
+				if errorResp.Error.Tag == "duplicate_user" || errorResp.Error.Tag == "user_already_has_role" {
+					return &ratelimitData, nil
+				}
+			}
+			// Restore the body for logBody
+			res.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+		}
+	}
+
 	if err != nil {
 		logBody(ctx, res)
 		return &ratelimitData, err
 	}
 
-	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		logBody(ctx, res)
-		return &ratelimitData, err
+		return &ratelimitData, fmt.Errorf("unexpected status code: %d", res.StatusCode)
 	}
 
 	return &ratelimitData, nil

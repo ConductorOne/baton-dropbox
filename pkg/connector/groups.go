@@ -182,12 +182,12 @@ func (r *groupBuilder) Grant(
 ) {
 	groupId := entitlement.Resource.Id.Resource
 	if principal.Id.ResourceType != userResourceType.Id {
-		return nil, fmt.Errorf("baton-dropbox: only users can be granted role membership")
+		return nil, fmt.Errorf("baton-dropbox: only users can be granted group membership")
 	}
 
 	email, err := getEmail(principal)
 	if err != nil {
-		return nil, fmt.Errorf("baton-auth0: failed to get email for user: %w", err)
+		return nil, fmt.Errorf("baton-dropbox: failed to get email for user: %w", err)
 	}
 
 	var rateLimitData *v2.RateLimitDescription
@@ -201,7 +201,7 @@ func (r *groupBuilder) Grant(
 	var outputAnnotations annotations.Annotations
 	outputAnnotations.WithRateLimiting(rateLimitData)
 	if err != nil {
-		return outputAnnotations, fmt.Errorf("baton-dropbox: failed to add user to role: %w", err)
+		return outputAnnotations, fmt.Errorf("baton-dropbox: failed to add user to group: %w", err)
 	}
 
 	return outputAnnotations, nil
@@ -213,12 +213,12 @@ func (r *groupBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations
 	groupId := entitlement.Resource.Id.Resource
 
 	if principal.Id.ResourceType != userResourceType.Id {
-		return nil, fmt.Errorf("baton-auth0: only users can have role membership revoked")
+		return nil, fmt.Errorf("baton-dropbox: only users can have group membership revoked")
 	}
 
 	email, err := getEmail(principal)
 	if err != nil {
-		return nil, fmt.Errorf("baton-auth0: failed to get email for user: %w", err)
+		return nil, fmt.Errorf("baton-dropbox: failed to get email for user: %w", err)
 	}
 
 	ratelimitData, err := r.RemoveUserFromGroup(ctx, groupId, email)

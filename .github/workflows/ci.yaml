@@ -1,142 +1,92 @@
-name: Test Baton Dropbox Integration
-
-on: pull_request
+name: ci
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+  push:
+    branches:
+      - main
 
 jobs:
-
   go-lint:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Install Go
         uses: actions/setup-go@v5
         with:
-          go-version: 1.23.x
-      - name: Checkout code
-        uses: actions/checkout@v4
+          go-version-file: go.mod
       - name: Run linters
         uses: golangci/golangci-lint-action@v8
         with:
           version: latest
           args: --timeout=3m
 
+  go-test:
+    strategy:
+      matrix:
+        platform: [ubuntu-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Go
+        if: success()
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: go tests
+        run: (set -o pipefail && go test -v -covermode=count -json ./... | tee test.json)
+      - name: annotate go tests
+        if: always()
+        uses: guyarb/golang-test-annotations@v0.5.1
+        with:
+          test-results: test.json
+
   test-groups:
     runs-on: ubuntu-latest
-
     env:
-      # Logging level for Baton
       BATON_LOG_LEVEL: debug
-
-      # Connector-specific details
-      CONNECTOR_GRANT: 'group:g:972aa9fd605e45b50000000000000034:owner:user:dbid:AADNrQVjzPb4hTFK-lWwzt_2pBWFPsMM03g'
-      CONNECTOR_ENTITLEMENT: 'group:g:972aa9fd605e45b50000000000000034:owner'
-      CONNECTOR_PRINCIPAL: 'dbid:AADNrQVjzPb4hTFK-lWwzt_2pBWFPsMM03g'
-      CONNECTOR_PRINCIPAL_TYPE: 'user'
-
-      # Secrets for Baton authentication
-      BATON_REFRESH_TOKEN: "${{ secrets.BATON_REFRESH_TOKEN }}"
-      BATON_APP_KEY: "${{ secrets.BATON_APP_KEY }}"
-      BATON_APP_SECRET: "${{ secrets.BATON_APP_SECRET }}"
-
+      BATON_REFRESH_TOKEN: ${{ secrets.BATON_REFRESH_TOKEN }}
+      BATON_APP_KEY: ${{ secrets.BATON_APP_KEY }}
+      BATON_APP_SECRET: ${{ secrets.BATON_APP_SECRET }}
     steps:
-      # Step 1: Set up Go environment
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Install Go
         uses: actions/setup-go@v5
         with:
-          go-version: 1.23.x
-      - name: Checkout code
-        uses: actions/checkout@v4
+          go-version-file: go.mod
       - name: Build baton-dropbox
         run: go build ./cmd/baton-dropbox
-      - name: Run baton-dropbox
-        run: ./baton-dropbox
-      - name: Install baton
-        run: ./scripts/get-baton.sh && mv baton /usr/local/bin
-
-      # tests
-      - name: Check for grant before revoking
-        run: |
-          baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | \
-          jq --exit-status ".grants[].principal.id.resource == \"${{ env.CONNECTOR_PRINCIPAL }}\""
-
-      - name: Revoke grants
-        run: ./baton-dropbox --revoke-grant="${{ env.CONNECTOR_GRANT }}"
-
-      - name: Check grant was revoked
-        run: |
-          ./baton-dropbox && \
-          baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | \
-          jq --exit-status "if .grants then .grants[]?.principal.id.resource != \"${{ env.CONNECTOR_PRINCIPAL }}\" else . end"
-
-      - name: Grant entitlement
-        run: |
-          ./baton-dropbox --grant-entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" \
-                          --grant-principal="${{ env.CONNECTOR_PRINCIPAL }}" \
-                          --grant-principal-type="${{ env.CONNECTOR_PRINCIPAL_TYPE }}"
-
-      - name: Check grant was re-granted
-        run: |
-          ./baton-dropbox && \
-          baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | \
-          jq --exit-status ".grants[].principal.id.resource == \"${{ env.CONNECTOR_PRINCIPAL }}\""
-
+      - name: Grant/revoke group test
+        uses: ConductorOne/github-workflows/actions/sync-test@v2
+        with:
+          connector: ./baton-dropbox
+          baton-entitlement: "${{ vars.TEST_GROUP_ENTITLEMENT }}"
+          baton-principal: "${{ vars.TEST_GROUP_PRINCIPAL }}"
+          baton-principal-type: "${{ vars.TEST_GROUP_PRINCIPAL_TYPE }}"
 
   test-roles:
     runs-on: ubuntu-latest
-
     env:
-      # Logging level for Baton
       BATON_LOG_LEVEL: debug
-
-      # Connector-specific details
-      CONNECTOR_GRANT: 'role:pid_dbtmr:AAAAAFMcx6E0tax39Kb0H671TzWLeE07dwaqFQ5fDRy2:member:user:dbid:AADNrQVjzPb4hTFK-lWwzt_2pBWFPsMM03g'
-      CONNECTOR_ENTITLEMENT: 'role:pid_dbtmr:AAAAAFMcx6E0tax39Kb0H671TzWLeE07dwaqFQ5fDRy2:member'
-      CONNECTOR_PRINCIPAL: 'dbid:AADNrQVjzPb4hTFK-lWwzt_2pBWFPsMM03g'
-      CONNECTOR_PRINCIPAL_TYPE: 'user'
-
-      # Secrets for Baton authentication
-      BATON_REFRESH_TOKEN: "${{ secrets.BATON_REFRESH_TOKEN }}"
-      BATON_APP_KEY: "${{ secrets.BATON_APP_KEY }}"
-      BATON_APP_SECRET: "${{ secrets.BATON_APP_SECRET }}"
-
+      BATON_REFRESH_TOKEN: ${{ secrets.BATON_REFRESH_TOKEN }}
+      BATON_APP_KEY: ${{ secrets.BATON_APP_KEY }}
+      BATON_APP_SECRET: ${{ secrets.BATON_APP_SECRET }}
     steps:
-      # Step 1: Set up Go environment
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Install Go
         uses: actions/setup-go@v5
         with:
-          go-version: 1.23.x
-      - name: Checkout code
-        uses: actions/checkout@v4
+          go-version-file: go.mod
       - name: Build baton-dropbox
         run: go build ./cmd/baton-dropbox
-      - name: Run baton-dropbox
-        run: ./baton-dropbox
-      - name: Install baton
-        run: ./scripts/get-baton.sh && mv baton /usr/local/bin
-
-      # tests
-      - name: Check for grant before revoking
-        run: |
-          baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | \
-          jq --exit-status ".grants[].principal.id.resource == \"${{ env.CONNECTOR_PRINCIPAL }}\""
-
-      - name: Revoke grants
-        run: ./baton-dropbox --revoke-grant="${{ env.CONNECTOR_GRANT }}"
-
-      - name: Check grant was revoked
-        run: |
-          ./baton-dropbox && \
-          baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | \
-          jq --exit-status "if .grants then .grants[]?.principal.id.resource != \"${{ env.CONNECTOR_PRINCIPAL }}\" else . end"
-
-      - name: Grant entitlement
-        run: |
-          ./baton-dropbox --grant-entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" \
-                          --grant-principal="${{ env.CONNECTOR_PRINCIPAL }}" \
-                          --grant-principal-type="${{ env.CONNECTOR_PRINCIPAL_TYPE }}"
-
-      - name: Check grant was re-granted
-        run: |
-          ./baton-dropbox && \
-          baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | \
-          jq --exit-status ".grants[].principal.id.resource == \"${{ env.CONNECTOR_PRINCIPAL }}\""
-
+      - name: Grant/revoke role test
+        uses: ConductorOne/github-workflows/actions/sync-test@v2
+        with:
+          connector: ./baton-dropbox
+          baton-entitlement: "${{ vars.TEST_ROLE_ENTITLEMENT }}"
+          baton-principal: "${{ vars.TEST_ROLE_PRINCIPAL }}"
+          baton-principal-type: "${{ vars.TEST_ROLE_PRINCIPAL_TYPE }}"
