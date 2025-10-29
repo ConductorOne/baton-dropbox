@@ -7,7 +7,6 @@ import (
 	"github.com/conductorone/baton-dropbox/pkg/connector/dropbox"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
-	"github.com/conductorone/baton-sdk/pkg/pagination"
 	resourceSdk "github.com/conductorone/baton-sdk/pkg/types/resource"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
@@ -48,9 +47,10 @@ func (o *userBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 
 // List returns all the users from the database as resource objects.
 // Users include a UserTrait because they are the 'shape' of a standard user.
-func (o *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+func (o *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, attr resourceSdk.SyncOpAttrs) ([]*v2.Resource, *resourceSdk.SyncOpResults, error) {
 	logger := ctxzap.Extract(ctx)
-	logger.Debug("Starting Users List", zap.String("token", pToken.Token))
+	token := attr.PageToken.Token
+	logger.Debug("Starting Users List", zap.String("token", attr.PageToken.Token))
 
 	outResources := []*v2.Resource{}
 	var payload *dropbox.ListUsersPayload
@@ -58,23 +58,27 @@ func (o *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 	var err error
 	var limit = 100
 
-	if pToken.Token == "" {
+	if token == "" {
 		payload, rateLimitData, err = o.ListUsers(ctx, limit)
 	} else {
-		payload, rateLimitData, err = o.ListUsersContinue(ctx, pToken.Token)
+		payload, rateLimitData, err = o.ListUsersContinue(ctx, token)
 	}
 
 	var outAnnotations annotations.Annotations
 	outAnnotations.WithRateLimiting(rateLimitData)
 
 	if err != nil {
-		return nil, "", outAnnotations, fmt.Errorf("error listing users: %w", err)
+		return nil, &resourceSdk.SyncOpResults{
+			Annotations: outAnnotations,
+		}, fmt.Errorf("error listing users: %w", err)
 	}
 
 	for _, user := range payload.Members {
 		resource, err := userResource(user.Profile, parentResourceID)
 		if err != nil {
-			return nil, "", outAnnotations, err
+			return nil, &resourceSdk.SyncOpResults{
+				Annotations: outAnnotations,
+			}, err
 		}
 		outResources = append(outResources, resource)
 	}
@@ -84,17 +88,20 @@ func (o *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 		cursor = payload.Cursor
 	}
 
-	return outResources, cursor, outAnnotations, nil
+	return outResources, &resourceSdk.SyncOpResults{
+		NextPageToken: cursor,
+		Annotations:   outAnnotations,
+	}, nil
 }
 
 // Entitlements always returns an empty slice for users.
-func (o *userBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
-	return nil, "", nil, nil
+func (o *userBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ resourceSdk.SyncOpAttrs) ([]*v2.Entitlement, *resourceSdk.SyncOpResults, error) {
+	return nil, nil, nil
 }
 
 // Grants always returns an empty slice for users since they don't have any entitlements.
-func (o *userBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
-	return nil, "", nil, nil
+func (o *userBuilder) Grants(ctx context.Context, resource *v2.Resource, _ resourceSdk.SyncOpAttrs) ([]*v2.Grant, *resourceSdk.SyncOpResults, error) {
+	return nil, nil, nil
 }
 
 func newUserBuilder(client *dropbox.Client) *userBuilder {

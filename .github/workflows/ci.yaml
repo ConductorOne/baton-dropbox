@@ -27,9 +27,9 @@ jobs:
       BATON_LOG_LEVEL: debug
 
       # Connector-specific details
-      CONNECTOR_GRANT: 'group:g:972aa9fd605e45b50000000000000034:owner:user:dbid:AADSHngsuonaSYR4BHryfeXi9A9CKQ1VOaI'
+      CONNECTOR_GRANT: 'group:g:972aa9fd605e45b50000000000000034:owner:user:dbid:AADNrQVjzPb4hTFK-lWwzt_2pBWFPsMM03g'
       CONNECTOR_ENTITLEMENT: 'group:g:972aa9fd605e45b50000000000000034:owner'
-      CONNECTOR_PRINCIPAL: 'dbid:AADSHngsuonaSYR4BHryfeXi9A9CKQ1VOaI'
+      CONNECTOR_PRINCIPAL: 'dbid:AADNrQVjzPb4hTFK-lWwzt_2pBWFPsMM03g'
       CONNECTOR_PRINCIPAL_TYPE: 'user'
 
       # Secrets for Baton authentication
@@ -88,9 +88,9 @@ jobs:
       BATON_LOG_LEVEL: debug
 
       # Connector-specific details
-      CONNECTOR_GRANT: 'role:pid_dbtmr:AAAAAFMcx6E0tax39Kb0H671TzWLeE07dwaqFQ5fDRy2:member:user:dbid:AADSHngsuonaSYR4BHryfeXi9A9CKQ1VOaI'
+      CONNECTOR_GRANT: 'role:pid_dbtmr:AAAAAFMcx6E0tax39Kb0H671TzWLeE07dwaqFQ5fDRy2:member:user:dbid:AADNrQVjzPb4hTFK-lWwzt_2pBWFPsMM03g'
       CONNECTOR_ENTITLEMENT: 'role:pid_dbtmr:AAAAAFMcx6E0tax39Kb0H671TzWLeE07dwaqFQ5fDRy2:member'
-      CONNECTOR_PRINCIPAL: 'dbid:AADSHngsuonaSYR4BHryfeXi9A9CKQ1VOaI'
+      CONNECTOR_PRINCIPAL: 'dbid:AADNrQVjzPb4hTFK-lWwzt_2pBWFPsMM03g'
       CONNECTOR_PRINCIPAL_TYPE: 'user'
 
       # Secrets for Baton authentication
