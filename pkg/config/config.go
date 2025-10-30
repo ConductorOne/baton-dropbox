@@ -24,6 +24,7 @@ var (
 		field.WithIsSecret(true),
 		field.WithDescription("The refresh token used to get an access token for authentication with Dropbox"),
 		field.WithRequired(false),
+		field.WithExportTarget(field.ExportTargetCLIOnly),
 	)
 	ConfigureField = field.BoolField(
 		"configure",
@@ -31,6 +32,12 @@ var (
 		field.WithDescription("Get the refresh token the first time you run the connector."),
 		field.WithRequired(false),
 		field.WithExportTarget(field.ExportTargetCLIOnly),
+	)
+
+	Oauth2TokenField = field.Oauth2Field(
+		"oauth2-token",
+		field.WithDisplayName("OAuth Authentication"),
+		field.WithDescription("The OAuth Authentication"),
 	)
 	// ConfigurationFields defines the external configuration required for the
 	// connector to run. Note: these fields can be marked as optional or
@@ -40,6 +47,7 @@ var (
 		AppSecret,
 		RefreshTokenField,
 		ConfigureField,
+		Oauth2TokenField,
 	}
 )
 
