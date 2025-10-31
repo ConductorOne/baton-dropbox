@@ -163,6 +163,11 @@ func (c *Connector) ResourceSyncers(ctx context.Context) []connectorbuilder.Reso
 	}
 }
 
+// Actions returns the custom actions manager for the connector.
+func (c *Connector) Actions(ctx context.Context) (connectorbuilder.CustomActionManager, error) {
+	return c.RegisterActionManager(ctx)
+}
+
 // Asset takes an input AssetRef and attempts to fetch it using the connector's authenticated http client
 // It streams a response, always starting with a metadata object, following by chunked payloads for the asset.
 func (c *Connector) Asset(ctx context.Context, asset *v2.AssetRef) (string, io.ReadCloser, error) {
@@ -172,8 +177,22 @@ func (c *Connector) Asset(ctx context.Context, asset *v2.AssetRef) (string, io.R
 // Metadata returns metadata about the connector.
 func (c *Connector) Metadata(ctx context.Context) (*v2.ConnectorMetadata, error) {
 	return &v2.ConnectorMetadata{
-		DisplayName: "My Baton Connector",
-		Description: "The template implementation of a baton connector",
+		DisplayName: "Dropbox Business Connector",
+		Description: "The Dropbox Business connector syncs users, groups, and roles with account provisioning and deprovisioning support.",
+		AccountCreationSchema: &v2.ConnectorAccountCreationSchema{
+			FieldMap: map[string]*v2.ConnectorAccountCreationSchema_Field{
+				"email": {
+					DisplayName: "Email",
+					Required:    true,
+					Description: "Email address for the user account. Dropbox will send an invitation to this address.",
+					Field: &v2.ConnectorAccountCreationSchema_Field_StringField{
+						StringField: &v2.ConnectorAccountCreationSchema_StringField{},
+					},
+					Placeholder: "john@doe.com",
+					Order:       0,
+				},
+			},
+		},
 	}, nil
 }
 

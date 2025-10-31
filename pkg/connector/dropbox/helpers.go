@@ -22,3 +22,13 @@ func logBody(ctx context.Context, res *http.Response) {
 	}
 	l.Info("response body: ", zap.String("body", string(body)))
 }
+
+// HasRole checks if a user has a specific role by role ID.
+func (u UserPayload) HasRole(roleID string) bool {
+	for _, role := range u.Roles {
+		if role.RoleID == roleID {
+			return true
+		}
+	}
+	return false
+}

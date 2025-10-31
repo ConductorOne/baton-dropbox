@@ -12,6 +12,8 @@ import (
 	resourceSdk "github.com/conductorone/baton-sdk/pkg/types/resource"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type roleBuilder struct {
@@ -51,7 +53,6 @@ func (o *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 	var payload *dropbox.ListUsersPayload
 	var rateLimitData *v2.RateLimitDescription
 	var err error
-	var limit = 100
 
 	if token == "" {
 		payload, rateLimitData, err = o.ListUsers(ctx, limit)
@@ -109,7 +110,6 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, attr re
 	var payload *dropbox.ListUsersPayload
 	var rateLimitData *v2.RateLimitDescription
 	var err error
-	var limit = 100
 
 	token := attr.PageToken.Token
 	if token == "" {
@@ -130,7 +130,7 @@ func (o *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, attr re
 		if !user.HasRole(resource.Id.Resource) {
 			continue
 		}
-		principalId, err := resourceSdk.NewResourceID(userResourceType, user.Profile.AccountID)
+		principalId, err := resourceSdk.NewResourceID(userResourceType, user.Profile.TeamMemberID)
 		if err != nil {
 			return nil, &resourceSdk.SyncOpResults{
 				Annotations: outAnnotations,
@@ -168,44 +168,51 @@ func (r *roleBuilder) Grant(
 	annotations.Annotations,
 	error,
 ) {
+	l := ctxzap.Extract(ctx)
 	roleId := entitlement.Resource.Id.Resource
 	if principal.Id.ResourceType != userResourceType.Id {
 		return nil, fmt.Errorf("baton-dropbox: only users can be granted role membership")
 	}
 
-	email, err := getEmail(principal)
-	if err != nil {
-		return nil, fmt.Errorf("baton-dropbox: failed to get email: %w", err)
-	}
+	teamMemberID := principal.Id.Resource
 
-	rateLimitData, err := r.AddRoleToUser(ctx, roleId, email)
+	rateLimitData, err := r.AddRoleToUser(ctx, roleId, teamMemberID)
 	var outputAnnotations annotations.Annotations
 	outputAnnotations.WithRateLimiting(rateLimitData)
 	if err != nil {
-		return outputAnnotations, fmt.Errorf("baton-dropbox: failed to add user to role: %s", err.Error())
+		if status.Code(err) == codes.AlreadyExists {
+			l.Warn("baton-dropbox: role membership to grant already exists; treating as successful because the end state is achieved",
+				zap.String("role_id", roleId),
+				zap.String("team_member_id", teamMemberID))
+			return annotations.New(&v2.GrantAlreadyExists{}), nil
+		}
+		return outputAnnotations, fmt.Errorf("baton-dropbox: failed to add user to role: %w", err)
 	}
 
 	return outputAnnotations, nil
 }
 
 func (r *roleBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations.Annotations, error) {
+	l := ctxzap.Extract(ctx)
 	principal := grant.Principal
 
 	if principal.Id.ResourceType != userResourceType.Id {
 		return nil, fmt.Errorf("baton-dropbox: only users can have role membership revoked")
 	}
 
-	email, err := getEmail(principal)
-	if err != nil {
-		return nil, fmt.Errorf("baton-dropbox: failed to get email: %s", err.Error())
-	}
+	teamMemberID := principal.Id.Resource
 
 	var outputAnnotations annotations.Annotations
-	ratelimitData, err := r.ClearRoles(ctx, email)
+	ratelimitData, err := r.ClearRoles(ctx, teamMemberID)
 	outputAnnotations.WithRateLimiting(ratelimitData)
 
 	if err != nil {
-		return outputAnnotations, fmt.Errorf("baton-dropbox: failed to revoke membership to role: %s", err.Error())
+		if status.Code(err) == codes.AlreadyExists || status.Code(err) == codes.NotFound {
+			l.Warn("baton-dropbox: role membership to revoke not found; treating as successful because the end state is achieved",
+				zap.String("team_member_id", teamMemberID))
+			return annotations.New(&v2.GrantAlreadyRevoked{}), nil
+		}
+		return outputAnnotations, fmt.Errorf("baton-dropbox: failed to revoke membership from role: %w", err)
 	}
 	return outputAnnotations, nil
 }
