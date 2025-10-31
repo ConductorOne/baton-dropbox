@@ -23,15 +23,15 @@ import (
 //	    -d client_id=<app_key> \
 //	    -d client_secret=<app_secret>
 func (c *Client) RequestAccessTokenUsingRefreshToken(ctx context.Context) (string, *time.Time, error) {
-	if c.RefreshToken == "" {
+	if c.config.RefreshToken == "" {
 		return "", nil, fmt.Errorf("dropbox-connector: refresh token is empty, run with --configure flag to get a refresh token")
 	}
 	grantType := "refresh_token"
 
 	form := url.Values{}
-	form.Set("client_id", c.AppKey)
-	form.Set("client_secret", c.AppSecret)
-	form.Set("refresh_token", c.RefreshToken)
+	form.Set("client_id", c.config.AppKey)
+	form.Set("client_secret", c.config.AppSecret)
+	form.Set("refresh_token", c.config.RefreshToken)
 	form.Set("grant_type", grantType)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, TokenURL, strings.NewReader(form.Encode()))
@@ -45,7 +45,7 @@ func (c *Client) RequestAccessTokenUsingRefreshToken(ctx context.Context) (strin
 		ExpiresIn   int    `json:"expires_in"`
 		TokenType   string `json:"token_type"`
 	}
-	res, err := c.Do(req,
+	res, err := c.wrapper.Do(req,
 		uhttp.WithJSONResponse(&target),
 	)
 	if err != nil {
@@ -91,8 +91,8 @@ func (c *Client) RequestAccessToken(ctx context.Context, code string) (string, *
 
 	form := url.Values{}
 	form.Set("grant_type", grantType)
-	form.Set("client_id", c.AppKey)
-	form.Set("client_secret", c.AppSecret)
+	form.Set("client_id", c.config.AppKey)
+	form.Set("client_secret", c.config.AppSecret)
 	form.Set("code", code)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, TokenURL, strings.NewReader(form.Encode()))
@@ -107,7 +107,7 @@ func (c *Client) RequestAccessToken(ctx context.Context, code string) (string, *
 		ExpiresIn    int    `json:"expires_in"`
 		TokenType    string `json:"token_type"`
 	}
-	res, err := c.Do(req,
+	res, err := c.wrapper.Do(req,
 		uhttp.WithJSONResponse(&target),
 	)
 	if err != nil {

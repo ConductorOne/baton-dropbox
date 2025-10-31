@@ -11,12 +11,7 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/uhttp"
 )
 
-type addRoleToUserBody struct {
-	NewRoles   []string `json:"new_roles"`
-	TeamMember EmailTag `json:"user"`
-}
-
-func (c *Client) AddRoleToUser(ctx context.Context, roleId, email string) (*v2.RateLimitDescription, error) {
+func (c *Client) AddRoleToUser(ctx context.Context, roleId string, teamMemberID string) (*v2.RateLimitDescription, error) {
 	token, err := c.TokenSource.Token()
 	if err != nil {
 		return nil, err
@@ -24,7 +19,7 @@ func (c *Client) AddRoleToUser(ctx context.Context, roleId, email string) (*v2.R
 
 	body := addRoleToUserBody{
 		NewRoles:   []string{roleId},
-		TeamMember: EmailTag{Tag: "email", Email: email},
+		TeamMember: TeamMemberIdTag{Tag: "team_member_id", TeamMemberID: teamMemberID},
 	}
 
 	buffer := new(bytes.Buffer)
@@ -40,7 +35,7 @@ func (c *Client) AddRoleToUser(ctx context.Context, roleId, email string) (*v2.R
 	req.Header.Set("Content-Type", "application/json")
 
 	var ratelimitData v2.RateLimitDescription
-	res, err := c.Do(req,
+	res, err := c.wrapper.Do(req,
 		uhttp.WithRatelimitData(&ratelimitData),
 	)
 
@@ -61,7 +56,7 @@ func (c *Client) AddRoleToUser(ctx context.Context, roleId, email string) (*v2.R
 // endpoint only allows removing all roles, not specific roles
 // also removing them all leaves the user with the member role by default
 // https://www.dropbox.com/developers/documentation/http/teams#team-members-set_admin_permissions
-func (c *Client) ClearRoles(ctx context.Context, email string) (*v2.RateLimitDescription, error) {
+func (c *Client) ClearRoles(ctx context.Context, teamMemberID string) (*v2.RateLimitDescription, error) {
 	token, err := c.TokenSource.Token()
 	if err != nil {
 		return nil, err
@@ -69,7 +64,7 @@ func (c *Client) ClearRoles(ctx context.Context, email string) (*v2.RateLimitDes
 
 	body := addRoleToUserBody{
 		NewRoles:   []string{},
-		TeamMember: EmailTag{Tag: "email", Email: email},
+		TeamMember: TeamMemberIdTag{Tag: "team_member_id", TeamMemberID: teamMemberID},
 	}
 
 	buffer := new(bytes.Buffer)
@@ -85,7 +80,7 @@ func (c *Client) ClearRoles(ctx context.Context, email string) (*v2.RateLimitDes
 	req.Header.Set("Content-Type", "application/json")
 
 	var ratelimitData v2.RateLimitDescription
-	res, err := c.Do(req,
+	res, err := c.wrapper.Do(req,
 		uhttp.WithRatelimitData(&ratelimitData),
 	)
 
