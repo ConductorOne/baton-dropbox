@@ -35,7 +35,7 @@ var (
 	)
 
 	Oauth2TokenField = field.Oauth2Field(
-		"oauth2-token",
+		"oauth2",
 		field.WithDisplayName("OAuth Authentication"),
 		field.WithDescription("The OAuth Authentication"),
 	)
