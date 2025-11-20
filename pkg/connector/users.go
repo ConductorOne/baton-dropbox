@@ -3,6 +3,7 @@ package connector
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/conductorone/baton-dropbox/pkg/connector/dropbox"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
@@ -47,7 +48,7 @@ func userResource(user dropbox.Profile, parentResourceID *v2.ResourceId) (*v2.Re
 
 	userTraitOptions := []resourceSdk.UserTraitOption{
 		resourceSdk.WithEmail(user.Email, true),
-		resourceSdk.WithStatus(userStatus),
+		resourceSdk.WithDetailedStatus(userStatus, user.Status.Tag),
 		resourceSdk.WithUserProfile(profile),
 		resourceSdk.WithUserLogin(user.Email),
 	}
@@ -198,6 +199,10 @@ func (o *userBuilder) Delete(ctx context.Context, resourceId *v2.ResourceId) (an
 	annos.WithRateLimiting(rateLimitData)
 
 	if err != nil {
+		if strings.Contains(err.Error(), "user_not_found") {
+			l.Info("user already deleted", zap.String("teamMemberID", teamMemberID))
+			return annos, nil
+		}
 		l.Error("error deleting user", zap.Error(err), zap.String("teamMemberID", teamMemberID))
 		return annos, err
 	}
