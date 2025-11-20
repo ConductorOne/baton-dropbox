@@ -12,6 +12,8 @@ import (
 	resourceSdk "github.com/conductorone/baton-sdk/pkg/types/resource"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type groupBuilder struct {
@@ -20,6 +22,7 @@ type groupBuilder struct {
 
 const groupMembership = "member"
 const groupOwner = "owner"
+const limit = 100
 
 func groupResource(group dropbox.Group, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
 	return resourceSdk.NewGroupResource(
@@ -51,7 +54,6 @@ func (o *groupBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId
 	var payload *dropbox.ListGroupsPayload
 	var rateLimitData *v2.RateLimitDescription
 	var err error
-	var limit = 100
 
 	if token == "" {
 		payload, rateLimitData, err = o.ListGroups(ctx, limit)
@@ -130,7 +132,7 @@ func (o *groupBuilder) Grants(ctx context.Context, resource *v2.Resource, attr r
 	}
 
 	for _, user := range payload.Members {
-		principalId, err := resourceSdk.NewResourceID(userResourceType, user.Profile.AccountID)
+		principalId, err := resourceSdk.NewResourceID(userResourceType, user.Profile.TeamMemberID)
 		if err != nil {
 			return nil, &resourceSdk.SyncOpResults{
 				Annotations: outAnnotations,
@@ -180,52 +182,61 @@ func (r *groupBuilder) Grant(
 	annotations.Annotations,
 	error,
 ) {
+	l := ctxzap.Extract(ctx)
 	groupId := entitlement.Resource.Id.Resource
 	if principal.Id.ResourceType != userResourceType.Id {
-		return nil, fmt.Errorf("baton-dropbox: only users can be granted role membership")
+		return nil, fmt.Errorf("baton-dropbox: only users can be granted group membership")
 	}
 
-	email, err := getEmail(principal)
-	if err != nil {
-		return nil, fmt.Errorf("baton-auth0: failed to get email for user: %w", err)
-	}
+	teamMemberID := principal.Id.Resource
 
 	var rateLimitData *v2.RateLimitDescription
+	var err error
 	switch entitlement.Slug {
 	case groupMembership:
-		rateLimitData, err = r.AddUserToGroup(ctx, groupId, email, groupMembership)
+		rateLimitData, err = r.AddUserToGroup(ctx, groupId, teamMemberID, groupMembership)
 	case groupOwner:
-		rateLimitData, err = r.AddUserToGroup(ctx, groupId, email, groupOwner)
+		rateLimitData, err = r.AddUserToGroup(ctx, groupId, teamMemberID, groupOwner)
 	}
 
 	var outputAnnotations annotations.Annotations
 	outputAnnotations.WithRateLimiting(rateLimitData)
 	if err != nil {
-		return outputAnnotations, fmt.Errorf("baton-dropbox: failed to add user to role: %w", err)
+		if status.Code(err) == codes.AlreadyExists {
+			l.Warn("baton-dropbox: group membership to grant already exists; treating as successful because the end state is achieved",
+				zap.String("group_id", groupId),
+				zap.String("team_member_id", teamMemberID))
+			return annotations.New(&v2.GrantAlreadyExists{}), nil
+		}
+		return outputAnnotations, fmt.Errorf("baton-dropbox: failed to add user to group: %w", err)
 	}
 
 	return outputAnnotations, nil
 }
 
 func (r *groupBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations.Annotations, error) {
+	l := ctxzap.Extract(ctx)
 	principal := grant.Principal
 	entitlement := grant.Entitlement
 	groupId := entitlement.Resource.Id.Resource
 
 	if principal.Id.ResourceType != userResourceType.Id {
-		return nil, fmt.Errorf("baton-auth0: only users can have role membership revoked")
+		return nil, fmt.Errorf("baton-dropbox: only users can have group membership revoked")
 	}
 
-	email, err := getEmail(principal)
-	if err != nil {
-		return nil, fmt.Errorf("baton-auth0: failed to get email for user: %w", err)
-	}
+	teamMemberID := principal.Id.Resource
 
-	ratelimitData, err := r.RemoveUserFromGroup(ctx, groupId, email)
+	ratelimitData, err := r.RemoveUserFromGroup(ctx, groupId, teamMemberID)
 	var outputAnnotations annotations.Annotations
 	outputAnnotations.WithRateLimiting(ratelimitData)
 	if err != nil {
-		return outputAnnotations, fmt.Errorf("baton-dropbox: failed to revoke membership to group: %w", err)
+		if status.Code(err) == codes.AlreadyExists || status.Code(err) == codes.NotFound {
+			l.Warn("baton-dropbox: group membership to revoke not found; treating as successful because the end state is achieved",
+				zap.String("group_id", groupId),
+				zap.String("team_member_id", teamMemberID))
+			return annotations.New(&v2.GrantAlreadyRevoked{}), nil
+		}
+		return outputAnnotations, fmt.Errorf("baton-dropbox: failed to revoke membership from group: %w", err)
 	}
 	return outputAnnotations, nil
 }

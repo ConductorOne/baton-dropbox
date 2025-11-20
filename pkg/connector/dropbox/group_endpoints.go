@@ -13,10 +13,6 @@ import (
 
 const groupDefaultLimit = 100
 
-type ListGroupsBody struct {
-	Limit int `json:"limit"`
-}
-
 func DefaultListGroupsBody() ListGroupsBody {
 	return ListGroupsBody{
 		Limit: groupDefaultLimit,
@@ -50,7 +46,7 @@ func (c *Client) ListGroups(ctx context.Context, limit int) (*ListGroupsPayload,
 
 	var target ListGroupsPayload
 	var ratelimitData v2.RateLimitDescription
-	res, err := c.Do(req,
+	res, err := c.wrapper.Do(req,
 		uhttp.WithJSONResponse(&target),
 		uhttp.WithRatelimitData(&ratelimitData),
 	)
@@ -92,7 +88,7 @@ func (c *Client) ListGroupsContinue(ctx context.Context, cursor string) (*ListGr
 
 	var target ListGroupsPayload
 	var ratelimitData v2.RateLimitDescription
-	res, err := c.Do(req,
+	res, err := c.wrapper.Do(req,
 		uhttp.WithJSONResponse(&target),
 		uhttp.WithRatelimitData(&ratelimitData),
 	)
@@ -108,16 +104,6 @@ func (c *Client) ListGroupsContinue(ctx context.Context, cursor string) (*ListGr
 	}
 
 	return &target, &ratelimitData, nil
-}
-
-type ListGroupMembersBody struct {
-	Group GroupIdTag `json:"group"`
-	Limit int        `json:"limit"`
-}
-
-type GroupIdTag struct {
-	GroupID string `json:"group_id"`
-	Tag     string `json:".tag"`
 }
 
 func DefaultGroupMembersBody() ListGroupMembersBody {
@@ -159,7 +145,7 @@ func (c *Client) ListGroupMembers(ctx context.Context, groupId string, limit int
 
 	var target ListGroupMembersPayload
 	var ratelimitData v2.RateLimitDescription
-	res, err := c.Do(req,
+	res, err := c.wrapper.Do(req,
 		uhttp.WithJSONResponse(&target),
 		uhttp.WithRatelimitData(&ratelimitData),
 	)
@@ -202,7 +188,7 @@ func (c *Client) ListGroupMembersContinue(ctx context.Context, cursor string) (*
 
 	var target ListGroupMembersPayload
 	var ratelimitData v2.RateLimitDescription
-	res, err := c.Do(req,
+	res, err := c.wrapper.Do(req,
 		uhttp.WithJSONResponse(&target),
 		uhttp.WithRatelimitData(&ratelimitData),
 	)
@@ -221,18 +207,7 @@ func (c *Client) ListGroupMembersContinue(ctx context.Context, cursor string) (*
 	return &target, &ratelimitData, nil
 }
 
-type RemoveUserFromGroupBody struct {
-	Group         GroupIdTag `json:"group"`
-	Users         []EmailTag `json:"users"`
-	ReturnMembers bool       `json:"return_members"`
-}
-
-type EmailTag struct {
-	Tag   string `json:".tag"`
-	Email string `json:"email"`
-}
-
-func (c *Client) RemoveUserFromGroup(ctx context.Context, groupId, email string) (*v2.RateLimitDescription, error) {
+func (c *Client) RemoveUserFromGroup(ctx context.Context, groupId string, teamMemberID string) (*v2.RateLimitDescription, error) {
 	token, err := c.TokenSource.Token()
 	if err != nil {
 		return nil, err
@@ -243,10 +218,10 @@ func (c *Client) RemoveUserFromGroup(ctx context.Context, groupId, email string)
 			GroupID: groupId,
 			Tag:     "group_id",
 		},
-		Users: []EmailTag{
+		Users: []TeamMemberIdTag{
 			{
-				Tag:   "email",
-				Email: email,
+				Tag:          "team_member_id",
+				TeamMemberID: teamMemberID,
 			},
 		},
 	}
@@ -264,7 +239,7 @@ func (c *Client) RemoveUserFromGroup(ctx context.Context, groupId, email string)
 	req.Header.Set("Content-Type", "application/json")
 
 	var ratelimitData v2.RateLimitDescription
-	res, err := c.Do(req,
+	res, err := c.wrapper.Do(req,
 		uhttp.WithRatelimitData(&ratelimitData),
 	)
 
@@ -282,50 +257,7 @@ func (c *Client) RemoveUserFromGroup(ctx context.Context, groupId, email string)
 	return &ratelimitData, nil
 }
 
-func (c *Client) GetTeamMemberID(ctx context.Context, groupId, userId string) (string, error) {
-	var payload *ListGroupMembersPayload
-	var err error
-	var limit = 100
-
-	payload, _, err = c.ListGroupMembers(ctx, groupId, limit)
-	if err != nil {
-		return "", fmt.Errorf("baton-dropbox: failed to list group members: %s", err.Error())
-	}
-
-	for _, member := range payload.Members {
-		if member.Profile.AccountID == userId {
-			return member.Profile.TeamMemberID, nil
-		}
-	}
-
-	for payload.HasMore {
-		payload, _, err = c.ListGroupMembersContinue(ctx, payload.Cursor)
-		if err != nil {
-			return "", fmt.Errorf("baton-dropbox: failed to list group members: %s", err.Error())
-		}
-
-		for _, member := range payload.Members {
-			if member.Profile.AccountID == userId {
-				return member.Profile.TeamMemberID, nil
-			}
-		}
-	}
-
-	return "", fmt.Errorf("baton-dropbox: user not found in group")
-}
-
-type AddUserToGroupBody struct {
-	Group         GroupIdTag          `json:"group"`
-	Members       []AddToGroupMembers `json:"members"`
-	ReturnMembers bool                `json:"return_members"`
-}
-
-type AddToGroupMembers struct {
-	AccessLevel string   `json:"access_type"`
-	User        EmailTag `json:"user"`
-}
-
-func (c *Client) AddUserToGroup(ctx context.Context, groupId, email, accessType string) (*v2.RateLimitDescription, error) {
+func (c *Client) AddUserToGroup(ctx context.Context, groupId, teamMemberID, accessType string) (*v2.RateLimitDescription, error) {
 	token, err := c.TokenSource.Token()
 	if err != nil {
 		return nil, err
@@ -338,10 +270,10 @@ func (c *Client) AddUserToGroup(ctx context.Context, groupId, email, accessType 
 		},
 		Members: []AddToGroupMembers{
 			{
-				AccessLevel: accessType,
-				User: EmailTag{
-					Tag:   "email",
-					Email: email,
+				AccessLevel: Tag{Tag: accessType},
+				User: TeamMemberIdTag{
+					Tag:          "team_member_id",
+					TeamMemberID: teamMemberID,
 				},
 			},
 		},
@@ -361,7 +293,7 @@ func (c *Client) AddUserToGroup(ctx context.Context, groupId, email, accessType 
 	req.Header.Set("Content-Type", "application/json")
 
 	var ratelimitData v2.RateLimitDescription
-	res, err := c.Do(req,
+	res, err := c.wrapper.Do(req,
 		uhttp.WithRatelimitData(&ratelimitData),
 	)
 	if err != nil {

@@ -11,6 +11,7 @@ Check out [Baton](https://github.com/conductorone/baton) to learn more the proje
 ## Prerequisites
 
 You need to pass an application key, secret, and refresh token to the connector. You can get these by following these steps:
+
 1. Create a Dropbox app. You can follow [this Dropbox quickstart guide](https://www.dropbox.com/developers/reference/getting-started) and click on the "App Console" link.
 2. You need to set the "Team Scopes" in the Permissions tab.
 3. Copy the application's key and secret.
@@ -45,9 +46,30 @@ baton resources
 # Data Model
 
 `baton-dropbox` will pull down information about the following resources:
+
 - Users
 - Roles
 - Groups
+
+# Provisioning
+
+This connector supports provisioning operations when the `--provisioning` flag is enabled:
+
+## Account Management
+
+- **Create Account**: Invite new team members by email
+- **Delete Account**: Remove team members from the organization
+- **Suspend Account**: Temporarily disable user access (via `disable_user` action)
+- **Enable Account**: Reactivate suspended users (via `enable_user` action)
+
+## Entitlement Management
+
+- **Grant Role**: Assign admin roles to users
+- **Revoke Role**: Remove admin roles from users
+- **Grant Group Membership**: Add users to groups
+- **Revoke Group Membership**: Remove users from groups
+
+For detailed setup instructions and scope requirements, see the [Dropbox Connector Setup Guide](./docs/doc-info.md)
 
 # Contributing, Support and Issues
 

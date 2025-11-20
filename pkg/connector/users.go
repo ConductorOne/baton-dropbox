@@ -7,6 +7,7 @@ import (
 	"github.com/conductorone/baton-dropbox/pkg/connector/dropbox"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
+	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
 	resourceSdk "github.com/conductorone/baton-sdk/pkg/types/resource"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
@@ -16,6 +17,22 @@ type userBuilder struct {
 	*dropbox.Client
 }
 
+// mapUserStatus converts Dropbox user status to SDK status.
+func mapUserStatus(status dropbox.Tag) v2.UserTrait_Status_Status {
+	switch status.Tag {
+	case "active":
+		return v2.UserTrait_Status_STATUS_ENABLED
+	case "invited":
+		return v2.UserTrait_Status_STATUS_ENABLED
+	case "suspended":
+		return v2.UserTrait_Status_STATUS_DISABLED
+	case "removed":
+		return v2.UserTrait_Status_STATUS_DELETED
+	default:
+		return v2.UserTrait_Status_STATUS_UNSPECIFIED
+	}
+}
+
 func userResource(user dropbox.Profile, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
 	profile := map[string]interface{}{
 		"id":             user.AccountID,
@@ -23,11 +40,14 @@ func userResource(user dropbox.Profile, parentResourceID *v2.ResourceId) (*v2.Re
 		"first_name":     user.Name.GivenName,
 		"last_name":      user.Name.Surname,
 		"team_member_id": user.TeamMemberID,
+		"status":         user.Status.Tag,
 	}
+
+	userStatus := mapUserStatus(user.Status)
 
 	userTraitOptions := []resourceSdk.UserTraitOption{
 		resourceSdk.WithEmail(user.Email, true),
-		resourceSdk.WithStatus(v2.UserTrait_Status_STATUS_ENABLED),
+		resourceSdk.WithStatus(userStatus),
 		resourceSdk.WithUserProfile(profile),
 		resourceSdk.WithUserLogin(user.Email),
 	}
@@ -35,7 +55,7 @@ func userResource(user dropbox.Profile, parentResourceID *v2.ResourceId) (*v2.Re
 	return resourceSdk.NewUserResource(
 		user.Email,
 		userResourceType,
-		user.AccountID,
+		user.TeamMemberID,
 		userTraitOptions,
 		resourceSdk.WithParentResourceID(parentResourceID),
 	)
@@ -56,7 +76,6 @@ func (o *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 	var payload *dropbox.ListUsersPayload
 	var rateLimitData *v2.RateLimitDescription
 	var err error
-	var limit = 100
 
 	if token == "" {
 		payload, rateLimitData, err = o.ListUsers(ctx, limit)
@@ -110,16 +129,78 @@ func newUserBuilder(client *dropbox.Client) *userBuilder {
 	}
 }
 
-func getEmail(principal *v2.Resource) (string, error) {
-	userTrait, err := resourceSdk.GetUserTrait(principal)
-	if err != nil {
-		return "", err
+// CreateAccountCapabilityDetails declares support for account provisioning without passwords.
+func (o *userBuilder) CreateAccountCapabilityDetails(ctx context.Context) (*v2.CredentialDetailsAccountProvisioning, annotations.Annotations, error) {
+	return &v2.CredentialDetailsAccountProvisioning{
+		SupportedCredentialOptions: []v2.CapabilityDetailCredentialOption{
+			v2.CapabilityDetailCredentialOption_CAPABILITY_DETAIL_CREDENTIAL_OPTION_NO_PASSWORD,
+		},
+		PreferredCredentialOption: v2.CapabilityDetailCredentialOption_CAPABILITY_DETAIL_CREDENTIAL_OPTION_NO_PASSWORD,
+	}, nil, nil
+}
+
+// CreateAccount provisions a new user in Dropbox Team based on AccountInfo.
+func (o *userBuilder) CreateAccount(
+	ctx context.Context,
+	accountInfo *v2.AccountInfo,
+	credentialOptions *v2.LocalCredentialOptions,
+) (
+	connectorbuilder.CreateAccountResponse,
+	[]*v2.PlaintextData,
+	annotations.Annotations,
+	error,
+) {
+	l := ctxzap.Extract(ctx)
+	profile := accountInfo.GetProfile().AsMap()
+
+	email, ok := profile["email"].(string)
+	if !ok || email == "" {
+		return nil, nil, nil, fmt.Errorf("email is required")
 	}
 
-	for _, email := range userTrait.GetEmails() {
-		if email.IsPrimary {
-			return email.Address, nil
-		}
+	response, rateLimitData, err := o.AddMember(ctx, email)
+	var annos annotations.Annotations
+	annos.WithRateLimiting(rateLimitData)
+
+	if err != nil {
+		l.Error("error creating user", zap.Error(err))
+		return nil, nil, annos, err
 	}
-	return "", fmt.Errorf("no primary email found for user")
+
+	if len(response.Complete) == 0 || response.Complete[0].Tag != "success" {
+		return nil, nil, annos, fmt.Errorf("failed to create user: unexpected response")
+	}
+
+	newUserProfile := response.Complete[0].Profile
+	newUserResource, err := userResource(newUserProfile, nil)
+	if err != nil {
+		l.Error("error converting created user to resource", zap.Error(err))
+		return nil, nil, annos, err
+	}
+
+	return &v2.CreateAccountResponse_SuccessResult{
+		Resource: newUserResource,
+	}, []*v2.PlaintextData{}, annos, nil
+}
+
+// Delete implements account deprovisioning for users.
+func (o *userBuilder) Delete(ctx context.Context, resourceId *v2.ResourceId) (annotations.Annotations, error) {
+	l := ctxzap.Extract(ctx)
+
+	if resourceId.ResourceType != userResourceType.Id {
+		return nil, fmt.Errorf("invalid resource type: expected %s, got %s", userResourceType.Id, resourceId.ResourceType)
+	}
+
+	teamMemberID := resourceId.Resource
+
+	_, rateLimitData, err := o.RemoveMember(ctx, teamMemberID)
+	var annos annotations.Annotations
+	annos.WithRateLimiting(rateLimitData)
+
+	if err != nil {
+		l.Error("error deleting user", zap.Error(err), zap.String("teamMemberID", teamMemberID))
+		return annos, err
+	}
+
+	return annos, nil
 }
