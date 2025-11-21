@@ -95,6 +95,14 @@ var (
 		WithPersistent(true),
 		WithExportTarget(ExportTargetNone),
 	)
+
+	authMethod = StringField(
+		"auth-method",
+		WithDescription(""),
+		WithPersistent(true),
+		WithExportTarget(ExportTargetNone),
+	)
+
 	skipGrants = BoolField("skip-grants",
 		WithDescription("This must be set to skip syncing of grants only (entitlements will still be synced)"),
 		WithPersistent(true),
@@ -222,6 +230,13 @@ var (
 		WithRequired(true),
 		WithDescription("The expected audience claim in the JWT (optional)"),
 		WithExportTarget(ExportTargetNone))
+
+	ServerSessionStoreMaximumSizeField = IntField("session-store-maximum-size",
+		WithDescription("The maximum size of the local in-memory session store cache in bytes."),
+		WithDefaultValue(1024*1024*15),
+		WithExportTarget(ExportTargetOps),
+		WithHidden(true),
+		WithPersistent(true))
 )
 
 func LambdaServerFields() []SchemaField {
@@ -287,6 +302,7 @@ var DefaultFields = []SchemaField{
 	compactSyncsField,
 	invokeActionField,
 	invokeActionArgsField,
+	ServerSessionStoreMaximumSizeField,
 
 	otelCollectorEndpoint,
 	otelCollectorEndpointTLSCertPath,
@@ -294,6 +310,8 @@ var DefaultFields = []SchemaField{
 	otelCollectorEndpointTlSInsecure,
 	otelTracingDisabled,
 	otelLoggingDisabled,
+
+	authMethod,
 }
 
 func IsFieldAmongDefaultList(f SchemaField) bool {
