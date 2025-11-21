@@ -3,6 +3,7 @@ package connector
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	config "github.com/conductorone/baton-sdk/pb/c1/config/v1"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
@@ -133,6 +134,10 @@ func (c *Connector) disableUserActionHandler(ctx context.Context, args *structpb
 
 	_, err = c.client.SuspendMember(ctx, teamMemberID)
 	if err != nil {
+		if strings.Contains(err.Error(), "suspend_inactive_user") {
+			l.Info("user is already disabled", zap.String("team_member_id", teamMemberID))
+			return getResponseStruct(true), nil, nil
+		}
 		l.Error("failed to disable user", zap.String("team_member_id", teamMemberID), zap.Error(err))
 		return nil, nil, fmt.Errorf("failed to disable user: %w", err)
 	}
@@ -154,6 +159,10 @@ func (c *Connector) enableUserActionHandler(ctx context.Context, args *structpb.
 
 	_, err = c.client.UnsuspendMember(ctx, teamMemberID)
 	if err != nil {
+		if strings.Contains(err.Error(), "unsuspend_non_suspended_member") {
+			l.Info("user is already enabled", zap.String("team_member_id", teamMemberID))
+			return getResponseStruct(true), nil, nil
+		}
 		l.Error("failed to enable user", zap.String("team_member_id", teamMemberID), zap.Error(err))
 		return nil, nil, fmt.Errorf("failed to enable user: %w", err)
 	}
