@@ -143,7 +143,14 @@ func DefineConfigurationV2[T field.Configurable](
 	relationships = append(relationships, field.DefaultRelationships...)
 	relationships = append(relationships, confschema.Constraints...)
 
-	err = cli.SetFlagsAndConstraints(mainCMD, field.NewConfiguration(confschema.Fields, field.WithConstraints(relationships...)))
+	err = cli.SetFlagsAndConstraints(
+		mainCMD,
+		field.NewConfiguration(
+			confschema.Fields,
+			field.WithConstraints(relationships...),
+			field.WithFieldGroups(confschema.FieldGroups),
+		),
+	)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -151,7 +158,12 @@ func DefineConfigurationV2[T field.Configurable](
 	mainCMD.AddCommand(cli.AdditionalCommands(connectorName, confschema.Fields)...)
 	cli.VisitFlags(mainCMD, v)
 
-	err = cli.OptionallyAddLambdaCommand(ctx, connectorName, v, connector, confschema, mainCMD)
+	sessionStoreEnabled, err := connectorrunner.IsSessionStoreEnabled(ctx, options...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = cli.OptionallyAddLambdaCommand(ctx, connectorName, v, connector, confschema, mainCMD, sessionStoreEnabled)
 
 	if err != nil {
 		return nil, nil, err

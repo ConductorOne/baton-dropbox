@@ -8,7 +8,7 @@ type Dropbox struct {
 	AppSecret string `mapstructure:"app-secret"`
 	RefreshToken string `mapstructure:"refresh-token"`
 	Configure bool `mapstructure:"configure"`
-	Oauth2Token string `mapstructure:"oauth2-token"`
+	Oauth2 string `mapstructure:"oauth2"`
 }
 
 func (c *Dropbox) findFieldByTag(tagValue string) (any, bool) {
