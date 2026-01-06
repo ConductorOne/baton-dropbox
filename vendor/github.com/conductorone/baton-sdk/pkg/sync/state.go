@@ -36,6 +36,7 @@ type State interface {
 	SetShouldSkipEntitlementsAndGrants()
 	ShouldSkipGrants() bool
 	SetShouldSkipGrants()
+	GetCompletedActionsCount() uint64
 }
 
 // ActionOp represents a sync operation.
@@ -52,6 +53,8 @@ func (s ActionOp) String() string {
 		return "list-resources"
 	case SyncEntitlementsOp:
 		return "list-entitlements"
+	case ListResourcesForEntitlementsOp:
+		return "list-resources-for-entitlements"
 	case SyncGrantsOp:
 		return "list-grants"
 	case SyncExternalResourcesOp:
@@ -62,6 +65,8 @@ func (s ActionOp) String() string {
 		return "grant-expansion"
 	case SyncTargetedResourceOp:
 		return "targeted-resource-sync"
+	case SyncStaticEntitlementsOp:
+		return "list-static-entitlements"
 	default:
 		return "unknown"
 	}
@@ -105,11 +110,17 @@ func newActionOp(str string) ActionOp {
 		return SyncExternalResourcesOp
 	case SyncTargetedResourceOp.String():
 		return SyncTargetedResourceOp
+	case SyncStaticEntitlementsOp.String():
+		return SyncStaticEntitlementsOp
+	case ListResourcesForEntitlementsOp.String():
+		return ListResourcesForEntitlementsOp
 	default:
 		return UnknownOp
 	}
 }
 
+// Do not change the order of these constants, and only append new ones at the end.
+// Otherwise resuming a sync started by an older version of baton-sdk will cause very strange behavior.
 const (
 	UnknownOp ActionOp = iota
 	InitOp
@@ -122,6 +133,7 @@ const (
 	SyncAssetsOp
 	SyncGrantExpansionOp
 	SyncTargetedResourceOp
+	SyncStaticEntitlementsOp
 )
 
 // Action stores the current operation, page token, and optional fields for which resource is being worked with.
@@ -145,6 +157,7 @@ type state struct {
 	shouldFetchRelatedResources     bool
 	shouldSkipEntitlementsAndGrants bool
 	shouldSkipGrants                bool
+	completedActionsCount           uint64
 }
 
 // serializedToken is used to serialize the token to JSON. This separate object is used to avoid having exported fields
@@ -158,6 +171,7 @@ type serializedToken struct {
 	ShouldFetchRelatedResources     bool                     `json:"should_fetch_related_resources,omitempty"`
 	ShouldSkipEntitlementsAndGrants bool                     `json:"should_skip_entitlements_and_grants,omitempty"`
 	ShouldSkipGrants                bool                     `json:"should_skip_grants,omitempty"`
+	CompletedActionsCount           uint64                   `json:"completed_actions_count,omitempty"`
 }
 
 // push adds a new action to the stack. If there is no current state, the action is directly set to current, else
@@ -185,6 +199,7 @@ func (st *state) pop() *Action {
 	}
 
 	ret := *st.currentAction
+	st.completedActionsCount++
 
 	if len(st.actions) > 0 {
 		st.currentAction = &st.actions[len(st.actions)-1]
@@ -231,10 +246,12 @@ func (st *state) Unmarshal(input string) error {
 		st.shouldSkipEntitlementsAndGrants = token.ShouldSkipEntitlementsAndGrants
 		st.shouldSkipGrants = token.ShouldSkipGrants
 		st.shouldFetchRelatedResources = token.ShouldFetchRelatedResources
+		st.completedActionsCount = token.CompletedActionsCount
 	} else {
 		st.actions = nil
 		st.entitlementGraph = nil
 		st.currentAction = &Action{Op: InitOp}
+		st.completedActionsCount = 0
 	}
 
 	return nil
@@ -254,6 +271,7 @@ func (st *state) Marshal() (string, error) {
 		ShouldFetchRelatedResources:     st.shouldFetchRelatedResources,
 		ShouldSkipEntitlementsAndGrants: st.shouldSkipEntitlementsAndGrants,
 		ShouldSkipGrants:                st.shouldSkipGrants,
+		CompletedActionsCount:           st.completedActionsCount,
 	})
 	if err != nil {
 		return "", err
@@ -393,4 +411,10 @@ func (st *state) ParentResourceTypeID(ctx context.Context) string {
 	}
 
 	return c.ParentResourceTypeID
+}
+
+func (st *state) GetCompletedActionsCount() uint64 {
+	st.mtx.RLock()
+	defer st.mtx.RUnlock()
+	return st.completedActionsCount
 }
