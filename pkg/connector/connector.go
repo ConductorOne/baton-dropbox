@@ -19,6 +19,8 @@ import (
 	"golang.org/x/oauth2"
 )
 
+var _ connectorbuilder.GlobalActionProvider = (*Connector)(nil)
+
 type Connector struct {
 	client *dropbox.Client
 }
@@ -161,11 +163,6 @@ func (c *Connector) ResourceSyncers(ctx context.Context) []connectorbuilder.Reso
 		newGroupBuilder(c.client),
 		// newFolderBuilder(c.client), // WIP
 	}
-}
-
-// Actions returns the custom actions manager for the connector.
-func (c *Connector) Actions(ctx context.Context) (connectorbuilder.CustomActionManager, error) {
-	return c.RegisterActionManager(ctx)
 }
 
 // Asset takes an input AssetRef and attempts to fetch it using the connector's authenticated http client

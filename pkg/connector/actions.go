@@ -9,7 +9,6 @@ import (
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/actions"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
-	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -105,20 +104,16 @@ func extractUserID(ctx context.Context, args *structpb.Struct, actionName string
 }
 
 // RegisterActionManager registers custom actions for the Dropbox connector.
-func (c *Connector) RegisterActionManager(ctx context.Context) (connectorbuilder.CustomActionManager, error) {
-	actionManager := actions.NewActionManager(ctx)
-
-	err := actionManager.RegisterAction(ctx, disableUserActionSchema.Name, disableUserActionSchema, c.disableUserActionHandler)
-	if err != nil {
-		return nil, fmt.Errorf("failed to register disable user action: %w", err)
+func (c *Connector) GlobalActions(ctx context.Context, registry actions.ActionRegistry) error {
+	if err := registry.Register(ctx, disableUserActionSchema, c.disableUserActionHandler); err != nil {
+		return fmt.Errorf("failed to register disable user action: %w", err)
 	}
 
-	err = actionManager.RegisterAction(ctx, enableUserActionSchema.Name, enableUserActionSchema, c.enableUserActionHandler)
-	if err != nil {
-		return nil, fmt.Errorf("failed to register enable user action: %w", err)
+	if err := registry.Register(ctx, enableUserActionSchema, c.enableUserActionHandler); err != nil {
+		return fmt.Errorf("failed to register enable user action: %w", err)
 	}
 
-	return actionManager, nil
+	return nil
 }
 
 // disableUserActionHandler handles the disable user action.
