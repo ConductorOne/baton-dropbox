@@ -39,6 +39,10 @@ var (
 		field.WithDisplayName("OAuth Authentication"),
 		field.WithDescription("The OAuth Authentication"),
 	)
+	BaseURLField = field.StringField(
+		"base-url",
+		field.WithDescription("Override the Dropbox API URL (for testing)"),
+	)
 	// ConfigurationFields defines the external configuration required for the
 	// connector to run. Note: these fields can be marked as optional or
 	// required.
@@ -48,6 +52,7 @@ var (
 		RefreshTokenField,
 		ConfigureField,
 		Oauth2TokenField,
+		BaseURLField,
 	}
 )
 

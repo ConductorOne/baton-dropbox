@@ -27,7 +27,7 @@ func (c *Client) AddRoleToUser(ctx context.Context, roleId string, teamMemberID 
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, SetRoleURL, buffer)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url("/2/team/members/set_admin_permissions_v2"), buffer)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +72,7 @@ func (c *Client) ClearRoles(ctx context.Context, teamMemberID string) (*v2.RateL
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, SetRoleURL, buffer)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url("/2/team/members/set_admin_permissions_v2"), buffer)
 	if err != nil {
 		return nil, err
 	}

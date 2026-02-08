@@ -37,7 +37,7 @@ func (c *Client) ListGroups(ctx context.Context, limit int) (*ListGroupsPayload,
 		return nil, nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ListGroupsURL, reader)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url("/2/team/groups/list"), reader)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -79,7 +79,7 @@ func (c *Client) ListGroupsContinue(ctx context.Context, cursor string) (*ListGr
 	if err != nil {
 		return nil, nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ListGroupsContinueURL, reader)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url("/2/team/groups/list/continue"), reader)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -136,7 +136,7 @@ func (c *Client) ListGroupMembers(ctx context.Context, groupId string, limit int
 	if err != nil {
 		return nil, nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ListGroupMembersURL, reader)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url("/2/team/groups/members/list"), reader)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -179,7 +179,7 @@ func (c *Client) ListGroupMembersContinue(ctx context.Context, cursor string) (*
 	if err != nil {
 		return nil, nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ListGroupMembersContinueURL, reader)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url("/2/team/groups/members/list/continue"), reader)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -231,7 +231,7 @@ func (c *Client) RemoveUserFromGroup(ctx context.Context, groupId string, teamMe
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, RemoveUserFromGroupURL, buffer)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url("/2/team/groups/members/remove"), buffer)
 	if err != nil {
 		return nil, err
 	}
@@ -285,7 +285,7 @@ func (c *Client) AddUserToGroup(ctx context.Context, groupId, teamMemberID, acce
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, AddUserToGroupURL, buf)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url("/2/team/groups/members/add"), buf)
 	if err != nil {
 		return nil, err
 	}
