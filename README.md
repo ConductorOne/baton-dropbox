@@ -1,6 +1,6 @@
 ![Baton Logo](./docs/images/baton-logo.png)
 
-# `baton-dropbox` [![Go Reference](https://pkg.go.dev/badge/github.com/conductorone/baton-dropbox.svg)](https://pkg.go.dev/github.com/conductorone/baton-dropbox) ![main ci](https://github.com/conductorone/baton-dropbox/actions/workflows/main.yaml/badge.svg)
+# `baton-dropbox` [![Go Reference](https://pkg.go.dev/badge/github.com/conductorone/baton-dropbox.svg)](https://pkg.go.dev/github.com/conductorone/baton-dropbox) ![ci](https://github.com/conductorone/baton-dropbox/actions/workflows/ci.yaml/badge.svg) ![verify](https://github.com/conductorone/baton-dropbox/actions/workflows/verify.yaml/badge.svg)
 
 `baton-dropbox` is a connector for built using the [Baton SDK](https://github.com/conductorone/baton-sdk).
 
