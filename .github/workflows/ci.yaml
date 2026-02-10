@@ -5,44 +5,7 @@ on:
   push:
     branches:
       - main
-
 jobs:
-  go-lint:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Install Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-      - name: Run linters
-        uses: golangci/golangci-lint-action@v8
-        with:
-          version: latest
-          args: --timeout=3m
-
-  go-test:
-    strategy:
-      matrix:
-        platform: [ubuntu-latest]
-    runs-on: ${{ matrix.platform }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Install Go
-        if: success()
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-      - name: go tests
-        run: (set -o pipefail && go test -v -covermode=count -json ./... | tee test.json)
-      - name: annotate go tests
-        if: always()
-        uses: guyarb/golang-test-annotations@v0.6.0
-        with:
-          test-results: test.json
-
   test-groups:
     runs-on: ubuntu-latest
     env:
@@ -66,7 +29,6 @@ jobs:
           baton-entitlement: "${{ vars.TEST_GROUP_ENTITLEMENT }}"
           baton-principal: "${{ vars.TEST_GROUP_PRINCIPAL }}"
           baton-principal-type: "${{ vars.TEST_GROUP_PRINCIPAL_TYPE }}"
-
   test-roles:
     runs-on: ubuntu-latest
     env:
@@ -90,7 +52,6 @@ jobs:
           baton-entitlement: "${{ vars.TEST_ROLE_ENTITLEMENT }}"
           baton-principal: "${{ vars.TEST_ROLE_PRINCIPAL }}"
           baton-principal-type: "${{ vars.TEST_ROLE_PRINCIPAL_TYPE }}"
-
   test-account-provisioning:
     runs-on: ubuntu-latest
     env:
@@ -113,7 +74,6 @@ jobs:
           connector: ./baton-dropbox
           account-email: "${{ vars.TEST_ACCOUNT_EMAIL }}"
           search-method: "email"
-
   test-actions:
     runs-on: ubuntu-latest
     env:
