@@ -42,6 +42,7 @@ var (
 	BaseURLField = field.StringField(
 		"base-url",
 		field.WithDescription("Override the Dropbox API URL (for testing)"),
+		field.WithHidden(true),
 	)
 	// ConfigurationFields defines the external configuration required for the
 	// connector to run. Note: these fields can be marked as optional or
