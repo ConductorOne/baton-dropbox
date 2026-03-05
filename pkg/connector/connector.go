@@ -29,7 +29,7 @@ type Connector struct {
 type Option func(*Connector) error
 
 // WithRefreshToken configures the connector to use refresh token authentication.
-func WithRefreshToken(ctx context.Context, appKey, appSecret, refreshToken string) Option {
+func WithRefreshToken(ctx context.Context, appKey, appSecret, refreshToken, baseURL string) Option {
 	return func(c *Connector) error {
 		if refreshToken == "" {
 			return fmt.Errorf("refresh token is required, get it by running the connector with the --configure flag")
@@ -39,6 +39,7 @@ func WithRefreshToken(ctx context.Context, appKey, appSecret, refreshToken strin
 			AppKey:       appKey,
 			AppSecret:    appSecret,
 			RefreshToken: refreshToken,
+			BaseURL:      baseURL,
 		})
 		if err != nil {
 			return fmt.Errorf("error creating dropbox client: %w", err)
@@ -55,10 +56,11 @@ func WithRefreshToken(ctx context.Context, appKey, appSecret, refreshToken strin
 }
 
 // WithTokenSource configures the connector to use a pre-configured token source.
-func WithTokenSource(ctx context.Context, appKey string, tokenSource oauth2.TokenSource) Option {
+func WithTokenSource(ctx context.Context, appKey, baseURL string, tokenSource oauth2.TokenSource) Option {
 	return func(c *Connector) error {
 		client, err := dropbox.NewClient(ctx, dropbox.Config{
-			AppKey: appKey,
+			AppKey:  appKey,
+			BaseURL: baseURL,
 		})
 		if err != nil {
 			return fmt.Errorf("error creating dropbox client: %w", err)
@@ -91,6 +93,7 @@ func NewLambdaConnector(ctx context.Context, dropboxCfg *cfg.Dropbox, cliOpts *c
 		opts = WithTokenSource(
 			ctx,
 			dropboxCfg.AppKey,
+			dropboxCfg.BaseUrl,
 			cliOpts.TokenSource,
 		)
 	} else {
@@ -99,6 +102,7 @@ func NewLambdaConnector(ctx context.Context, dropboxCfg *cfg.Dropbox, cliOpts *c
 			dropboxCfg.AppKey,
 			dropboxCfg.AppSecret,
 			dropboxCfg.RefreshToken,
+			dropboxCfg.BaseUrl,
 		)
 	}
 
@@ -138,6 +142,7 @@ func configure(ctx context.Context, dropboxCfg *cfg.Dropbox) error {
 	client, err := dropbox.NewClient(ctx, dropbox.Config{
 		AppKey:    appKey,
 		AppSecret: appSecret,
+		BaseURL:   dropboxCfg.BaseUrl,
 	})
 	if err != nil {
 		return err

@@ -53,7 +53,7 @@ func (c *Client) ListUsers(ctx context.Context, limit int) (*ListUsersPayload, *
 	if err != nil {
 		return nil, nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ListUsersURL, reader)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url("/2/team/members/list_v2"), reader)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -96,7 +96,7 @@ func (c *Client) ListUsersContinue(ctx context.Context, cursor string) (*ListUse
 		return nil, nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ListUsersContinueURL, reader)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url("/2/team/members/list/continue_v2"), reader)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -130,7 +130,7 @@ func (c *Client) AddMember(ctx context.Context, email string) (*AddMemberRespons
 	requestBody := AddMemberRequest{NewMembers: []NewMemberInfo{member}}
 
 	result := &AddMemberResponse{}
-	annos, err := c.doRequest(ctx, AddMemberURL, http.MethodPost, result, requestBody)
+	annos, err := c.doRequest(ctx, c.url("/2/team/members/add_v2"), http.MethodPost, result, requestBody)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to add member: %w", err)
 	}
@@ -149,7 +149,7 @@ func (c *Client) RemoveMember(ctx context.Context, teamMemberID string) (*Remove
 	}
 
 	result := &RemoveMemberResponse{}
-	annos, err := c.doRequest(ctx, RemoveMemberURL, http.MethodPost, result, requestBody)
+	annos, err := c.doRequest(ctx, c.url("/2/team/members/remove"), http.MethodPost, result, requestBody)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to remove member: %w", err)
 	}
@@ -164,7 +164,7 @@ func (c *Client) RemoveMember(ctx context.Context, teamMemberID string) (*Remove
 // SuspendMember suspends a team member's access using their team_member_id.
 // Based on API: POST /2/team/members/suspend.
 func (c *Client) SuspendMember(ctx context.Context, teamMemberID string) (*v2.RateLimitDescription, error) {
-	annos, err := c.doRequest(ctx, SuspendMemberURL, http.MethodPost, nil, newUserActionRequest(teamMemberID))
+	annos, err := c.doRequest(ctx, c.url("/2/team/members/suspend"), http.MethodPost, nil, newUserActionRequest(teamMemberID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to suspend member: %w", err)
 	}
@@ -175,7 +175,7 @@ func (c *Client) SuspendMember(ctx context.Context, teamMemberID string) (*v2.Ra
 // UnsuspendMember reactivates a suspended team member using their team_member_id.
 // Based on API: POST /2/team/members/unsuspend.
 func (c *Client) UnsuspendMember(ctx context.Context, teamMemberID string) (*v2.RateLimitDescription, error) {
-	annos, err := c.doRequest(ctx, UnsuspendMemberURL, http.MethodPost, nil, newUserActionRequest(teamMemberID))
+	annos, err := c.doRequest(ctx, c.url("/2/team/members/unsuspend"), http.MethodPost, nil, newUserActionRequest(teamMemberID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to unsuspend member: %w", err)
 	}

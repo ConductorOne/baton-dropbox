@@ -34,7 +34,7 @@ func (c *Client) RequestAccessTokenUsingRefreshToken(ctx context.Context) (strin
 	form.Set("refresh_token", c.config.RefreshToken)
 	form.Set("grant_type", grantType)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, TokenURL, strings.NewReader(form.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url("/oauth2/token"), strings.NewReader(form.Encode()))
 	if err != nil {
 		return "", nil, err
 	}
@@ -95,7 +95,7 @@ func (c *Client) RequestAccessToken(ctx context.Context, code string) (string, *
 	form.Set("client_secret", c.config.AppSecret)
 	form.Set("code", code)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, TokenURL, strings.NewReader(form.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url("/oauth2/token"), strings.NewReader(form.Encode()))
 	if err != nil {
 		return "", nil, "", err
 	}

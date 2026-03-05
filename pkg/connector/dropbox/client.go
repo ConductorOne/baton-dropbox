@@ -17,12 +17,14 @@ type Client struct {
 	wrapper     *uhttp.BaseHttpClient
 	config      Config
 	TokenSource oauth2.TokenSource
+	baseURL     string
 }
 
 type Config struct {
 	AppKey       string
 	AppSecret    string
 	RefreshToken string
+	BaseURL      string
 }
 
 func NewClient(ctx context.Context, config Config) (*Client, error) {
@@ -42,11 +44,22 @@ func NewClient(ctx context.Context, config Config) (*Client, error) {
 		return nil, err
 	}
 
+	baseURL := config.BaseURL
+	if baseURL == "" {
+		baseURL = BaseURL
+	}
+
 	client := &Client{
 		wrapper: wrapper,
 		config:  config,
+		baseURL: baseURL,
 	}
 	return client, nil
+}
+
+// url returns the full API URL for a given path suffix.
+func (c *Client) url(path string) string {
+	return c.baseURL + path
 }
 
 // doRequest executes an HTTP request and decodes the response into the provided result.
