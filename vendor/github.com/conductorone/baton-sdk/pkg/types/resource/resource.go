@@ -9,8 +9,13 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
 	"github.com/conductorone/baton-sdk/pkg/types/sessions"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
+
+var ErrNoAlias = fmt.Errorf("no aliases found for resource")
+var ErrEmptyAlias = fmt.Errorf("alias cannot be empty")
 
 type ResourceOption func(*v2.Resource) error
 
@@ -29,9 +34,10 @@ func WithAnnotation(msgs ...proto.Message) ResourceOption {
 	}
 }
 
+// WithExternalID: Deprecated. This field is no longer used.
 func WithExternalID(externalID *v2.ExternalId) ResourceOption {
 	return func(r *v2.Resource) error {
-		r.SetExternalId(externalID)
+		r.SetExternalId(externalID) //nolint:staticcheck // Deprecated.
 		return nil
 	}
 }
@@ -132,6 +138,39 @@ func WithRoleTrait(opts ...RoleTraitOption) ResourceOption {
 	}
 }
 
+func WithScopeBindingTrait(opts ...ScopeBindingTraitOption) ResourceOption {
+	return func(r *v2.Resource) error {
+		rt := &v2.ScopeBindingTrait{}
+
+		annos := annotations.Annotations(r.GetAnnotations())
+		_, err := annos.Pick(rt)
+		if err != nil {
+			return err
+		}
+
+		for _, o := range opts {
+			err := o(rt)
+			if err != nil {
+				return err
+			}
+		}
+
+		roleId := rt.GetRoleId()
+		scopeResourceId := rt.GetScopeResourceId()
+		if roleId == nil {
+			return status.Errorf(codes.InvalidArgument, "role ID is required for scope binding trait")
+		}
+		if scopeResourceId == nil {
+			return status.Errorf(codes.InvalidArgument, "scope resource ID is required for scope binding trait")
+		}
+
+		annos.Update(rt)
+		r.SetAnnotations(annos)
+
+		return nil
+	}
+}
+
 func WithAppTrait(opts ...AppTraitOption) ResourceOption {
 	return func(r *v2.Resource) error {
 		at := &v2.AppTrait{}
@@ -174,6 +213,53 @@ func WithSecretTrait(opts ...SecretTraitOption) ResourceOption {
 		}
 
 		annos.Update(rt)
+		r.SetAnnotations(annos)
+
+		return nil
+	}
+}
+
+// WithAliases sets the aliases id for a resource.
+func WithAliases(aliases ...string) ResourceOption {
+	return func(r *v2.Resource) error {
+		if len(aliases) == 0 {
+			return ErrNoAlias
+		}
+
+		aliasV := &v2.Aliases{}
+
+		annos := annotations.Annotations(r.GetAnnotations())
+		_, err := annos.Pick(aliasV)
+		if err != nil {
+			return err
+		}
+
+		uniqueAlias := make(map[string]struct{}, len(aliasV.GetIds())+len(aliases))
+		for _, alias := range aliasV.GetIds() {
+			uniqueAlias[alias] = struct{}{}
+		}
+
+		for _, alias := range aliases {
+			if alias == "" {
+				return ErrEmptyAlias
+			}
+
+			uniqueAlias[alias] = struct{}{}
+		}
+
+		ids := make([]string, 0, len(uniqueAlias))
+		for alias := range uniqueAlias {
+			ids = append(ids, alias)
+		}
+
+		aliasV.Ids = ids
+
+		err = aliasV.Validate()
+		if err != nil {
+			return err
+		}
+
+		annos.Update(aliasV)
 		r.SetAnnotations(annos)
 
 		return nil
@@ -295,6 +381,24 @@ func NewRoleResource(
 	opts ...ResourceOption,
 ) (*v2.Resource, error) {
 	opts = append(opts, WithRoleTrait(roleTraitOpts...))
+
+	ret, err := NewResource(name, resourceType, objectID, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return ret, nil
+}
+
+// NewScopeBindingResource returns a new resource instance with a configured scope binding trait.
+func NewScopeBindingResource(
+	name string,
+	resourceType *v2.ResourceType,
+	objectID any,
+	scopeBindingOpts []ScopeBindingTraitOption,
+	opts ...ResourceOption,
+) (*v2.Resource, error) {
+	opts = append(opts, WithScopeBindingTrait(scopeBindingOpts...))
 
 	ret, err := NewResource(name, resourceType, objectID, opts...)
 	if err != nil {

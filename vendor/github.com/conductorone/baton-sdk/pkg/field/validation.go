@@ -306,6 +306,58 @@ func ValidateStringMapRules(r *v1_conf.StringMapRules, v map[string]any, name st
 	return nil
 }
 
+func ValidateRepeatedResourceIdRules(r *v1_conf.RepeatedResourceIdRules, v []*v1_conf.ResourceId, name string) error {
+	if r == nil {
+		return nil
+	}
+	if r.GetIsRequired() && len(v) == 0 {
+		return fmt.Errorf("field %s of type []*ResourceId is marked as required but it has a zero-value", name)
+	}
+
+	if !r.GetValidateEmpty() && len(v) == 0 {
+		return nil
+	}
+
+	if r.HasMinItems() && uint64(len(v)) < r.GetMinItems() {
+		return fmt.Errorf("field %s: value must have at least %d items but got %d", name, r.GetMinItems(), len(v))
+	}
+	if r.HasMaxItems() && uint64(len(v)) > r.GetMaxItems() {
+		return fmt.Errorf("field %s: value must have at most %d items but got %d", name, r.GetMaxItems(), len(v))
+	}
+	if r.GetUnique() {
+		type resourceKey struct {
+			typeID string
+			id     string
+		}
+		uniqueValues := make(map[resourceKey]struct{})
+		for _, item := range v {
+			if item == nil {
+				continue
+			}
+			key := resourceKey{typeID: item.GetResourceTypeId(), id: item.GetResourceId()}
+			if _, exists := uniqueValues[key]; exists {
+				return fmt.Errorf("field %s: value must not contain duplicate items but got multiple (%s, %s)", name, key.typeID, key.id)
+			}
+			uniqueValues[key] = struct{}{}
+		}
+	}
+	if len(r.GetAllowedResourceTypeIds()) > 0 {
+		allowedTypes := make(map[string]struct{})
+		for _, t := range r.GetAllowedResourceTypeIds() {
+			allowedTypes[t] = struct{}{}
+		}
+		for i, item := range v {
+			if item == nil {
+				continue
+			}
+			if _, ok := allowedTypes[item.GetResourceTypeId()]; !ok {
+				return fmt.Errorf("field %s: item at index %d has resource type '%s' which is not in the allowed list %v", name, i, item.GetResourceTypeId(), r.GetAllowedResourceTypeIds())
+			}
+		}
+	}
+	return nil
+}
+
 func (e *ErrConfigurationMissingFields) Error() string {
 	var messages []string
 
@@ -328,16 +380,60 @@ type Configurable interface {
 	GetStringMap(key string) map[string]any
 }
 
+type validateOptions struct {
+	authGroup string
+}
+
+type Option func(*validateOptions)
+
+func WithAuthMethod(authMethod string) Option {
+	return func(o *validateOptions) {
+		o.authGroup = authMethod
+	}
+}
+
+func validateFieldGroupDefaults(fieldGroups []SchemaFieldGroup) error {
+	var defaultGroups []string
+	for _, fg := range fieldGroups {
+		if fg.Default {
+			defaultGroups = append(defaultGroups, fg.Name)
+		}
+	}
+	if len(defaultGroups) > 1 {
+		return fmt.Errorf("only one field group can be set as default, but found %d: %s", len(defaultGroups), strings.Join(defaultGroups, ", "))
+	}
+	return nil
+}
+
 // Validate perform validation of field requirement and constraints
 // relationships after the configuration is read.
 // We don't check the following:
 //   - if sets of fields are mutually exclusive and required
 //     together at the same time
-func Validate(c Configuration, v Configurable) error {
+func Validate(c Configuration, v Configurable, opts ...Option) error {
+	var validateOpts validateOptions
+
+	for _, opt := range opts {
+		opt(&validateOpts)
+	}
+
+	if err := validateFieldGroupDefaults(c.FieldGroups); err != nil {
+		return err
+	}
+
 	present := make(map[string]int)
 	validationErrors := &ErrConfigurationMissingFields{}
 
+	fieldGroupMap := c.FieldGroupFields(validateOpts.authGroup)
+
 	for _, f := range c.Fields {
+		if fieldGroupMap != nil {
+			if _, ok := fieldGroupMap[f.FieldName]; !ok {
+				// skip fields not in the selected auth method group
+				continue
+			}
+		}
+
 		// Note: the viper methods are actually casting
 		//   internal strings into the desired type.
 		var isPresent bool

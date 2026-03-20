@@ -2,8 +2,8 @@ package expand
 
 import (
 	"context"
+	"iter"
 
-	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/sync/expand/scc"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
@@ -138,9 +138,9 @@ func (g *EntitlementGraph) GetDescendantEntitlements(entitlementID string) map[s
 	if destinations, ok := g.SourcesToDestinations[node.Id]; ok {
 		for destinationID, edgeID := range destinations {
 			if destination, ok := g.Nodes[destinationID]; ok {
-				for _, entitlementID := range destination.EntitlementIDs {
+				for _, e := range destination.EntitlementIDs {
 					if edge, ok := g.Edges[edgeID]; ok {
-						entitlementsToEdges[entitlementID] = &edge
+						entitlementsToEdges[e] = &edge
 					}
 				}
 			}
@@ -149,14 +149,43 @@ func (g *EntitlementGraph) GetDescendantEntitlements(entitlementID string) map[s
 	return entitlementsToEdges
 }
 
+func (g *EntitlementGraph) GetExpandableDescendantEntitlements(ctx context.Context, entitlementID string) iter.Seq2[string, *Edge] {
+	return func(yield func(string, *Edge) bool) {
+		node := g.GetNode(entitlementID)
+		if node == nil {
+			return
+		}
+		if destinations, ok := g.SourcesToDestinations[node.Id]; ok {
+			for destinationID, edgeID := range destinations {
+				if destination, ok := g.Nodes[destinationID]; ok {
+					for _, e := range destination.EntitlementIDs {
+						if edge, ok := g.Edges[edgeID]; ok {
+							if edge.IsExpanded {
+								continue
+							}
+							if !yield(e, &edge) {
+								return
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 func (g *EntitlementGraph) HasEntitlement(entitlementID string) bool {
 	return g.GetNode(entitlementID) != nil
 }
 
-// AddEntitlement - add an entitlement's ID as an unconnected node in the graph.
-func (g *EntitlementGraph) AddEntitlement(entitlement *v2.Entitlement) {
+// AddEntitlementID adds an entitlement ID as an unconnected node in the graph.
+func (g *EntitlementGraph) AddEntitlementID(entitlementID string) {
+	if entitlementID == "" {
+		return
+	}
+
 	// If the entitlement is already in the graph, fail silently.
-	found := g.GetNode(entitlement.GetId())
+	found := g.GetNode(entitlementID)
 	if found != nil {
 		return
 	}
@@ -165,15 +194,13 @@ func (g *EntitlementGraph) AddEntitlement(entitlement *v2.Entitlement) {
 	// Start at 1 in case we don't initialize something and try to get node 0.
 	g.NextNodeID++
 
-	// Create a new node.
 	node := Node{
 		Id:             g.NextNodeID,
-		EntitlementIDs: []string{entitlement.GetId()},
+		EntitlementIDs: []string{entitlementID},
 	}
 
-	// Add the node to the data structures.
 	g.Nodes[node.Id] = node
-	g.EntitlementsToNodes[entitlement.GetId()] = node.Id
+	g.EntitlementsToNodes[entitlementID] = node.Id
 }
 
 // GetEntitlements returns a combined list of _all_ entitlements from all nodes.
@@ -183,6 +210,28 @@ func (g *EntitlementGraph) GetEntitlements() []string {
 		entitlements = append(entitlements, node.EntitlementIDs...)
 	}
 	return entitlements
+}
+
+func (g *EntitlementGraph) GetExpandableEntitlements(ctx context.Context) iter.Seq[string] {
+	return func(yield func(string) bool) {
+		l := ctxzap.Extract(ctx)
+		for _, node := range g.Nodes {
+			for _, entitlementID := range node.EntitlementIDs {
+				// We've already expanded this entitlement, so skip it.
+				if g.IsEntitlementExpanded(entitlementID) {
+					continue
+				}
+				// We have ancestors who have not been expanded yet, so we can't expand ourselves.
+				if g.HasUnexpandedAncestors(entitlementID) {
+					l.Debug("expandGrantsForEntitlements: skipping source entitlement because it has unexpanded ancestors", zap.String("source_entitlement_id", entitlementID))
+					continue
+				}
+				if !yield(entitlementID) {
+					return
+				}
+			}
+		}
+	}
 }
 
 // MarkEdgeExpanded given source and destination entitlements, mark the edge

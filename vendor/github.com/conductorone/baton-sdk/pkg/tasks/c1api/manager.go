@@ -18,6 +18,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	v1 "github.com/conductorone/baton-sdk/pb/c1/connectorapi/baton/v1"
 	"github.com/conductorone/baton-sdk/pkg/tasks"
 	"github.com/conductorone/baton-sdk/pkg/types"
@@ -52,8 +53,9 @@ type c1ApiTaskManager struct {
 	runnerShouldDebug                   bool
 	externalResourceC1Z                 string
 	externalResourceEntitlementIdFilter string
-	targetedSyncResourceIDs             []string
+	targetedSyncResources               []*v2.Resource
 	syncResourceTypeIDs                 []string
+	workerCount                         int
 }
 
 // getHeartbeatInterval returns an appropriate heartbeat interval. If the interval is 0, it will return the default heartbeat interval.
@@ -180,7 +182,14 @@ func (c *c1ApiTaskManager) finishTask(ctx context.Context, task *v1.Task, resp p
 
 	statusErr, ok := status.FromError(err)
 	if !ok {
-		statusErr = status.New(codes.Unknown, err.Error())
+		switch {
+		case errors.Is(err, context.Canceled):
+			statusErr = status.New(codes.Canceled, err.Error())
+		case errors.Is(err, context.DeadlineExceeded):
+			statusErr = status.New(codes.DeadlineExceeded, err.Error())
+		default:
+			statusErr = status.New(codes.Unknown, err.Error())
+		}
 	}
 
 	_, rpcErr := c.serviceClient.FinishTask(finishCtx, v1.BatonServiceFinishTaskRequest_builder{
@@ -248,8 +257,9 @@ func (c *c1ApiTaskManager) Process(ctx context.Context, task *v1.Task, cc types.
 			c.skipFullSync,
 			c.externalResourceC1Z,
 			c.externalResourceEntitlementIdFilter,
-			c.targetedSyncResourceIDs,
+			c.targetedSyncResources,
 			c.syncResourceTypeIDs,
+			c.workerCount,
 		)
 	case taskTypes.HelloType:
 		handler = newHelloTaskHandler(task, tHelpers)
@@ -285,6 +295,10 @@ func (c *c1ApiTaskManager) Process(ctx context.Context, task *v1.Task, cc types.
 		handler = newActionInvokeTaskHandler(task, tHelpers)
 	case taskTypes.ActionStatusType:
 		handler = newActionStatusTaskHandler(task, tHelpers)
+	case taskTypes.ListEventFeedsType:
+		handler = NewListEventFeedsHandler(task, tHelpers)
+	case taskTypes.ListEventsType:
+		handler = NewListEventsHandler(task, tHelpers)
 	default:
 		return c.finishTask(ctx, task, nil, nil, errors.New("unsupported task type"))
 	}
@@ -299,9 +313,16 @@ func (c *c1ApiTaskManager) Process(ctx context.Context, task *v1.Task, cc types.
 }
 
 func NewC1TaskManager(
-	ctx context.Context, clientID string, clientSecret string, tempDir string, skipFullSync bool,
-	externalC1Z string, externalResourceEntitlementIdFilter string, targetedSyncResourceIDs []string,
+	ctx context.Context,
+	clientID string,
+	clientSecret string,
+	tempDir string,
+	skipFullSync bool,
+	externalC1Z string,
+	externalResourceEntitlementIdFilter string,
+	targetedSyncResources []*v2.Resource,
 	syncResourceTypeIDs []string,
+	workerCount int,
 ) (tasks.Manager, error) {
 	serviceClient, err := newServiceClient(ctx, clientID, clientSecret)
 	if err != nil {
@@ -314,7 +335,8 @@ func NewC1TaskManager(
 		skipFullSync:                        skipFullSync,
 		externalResourceC1Z:                 externalC1Z,
 		externalResourceEntitlementIdFilter: externalResourceEntitlementIdFilter,
-		targetedSyncResourceIDs:             targetedSyncResourceIDs,
+		targetedSyncResources:               targetedSyncResources,
 		syncResourceTypeIDs:                 syncResourceTypeIDs,
+		workerCount:                         workerCount,
 	}, nil
 }

@@ -16,8 +16,9 @@ import (
 )
 
 type RunTimeOpts struct {
-	SessionStore sessions.SessionStore
-	TokenSource  oauth2.TokenSource
+	SessionStore       sessions.SessionStore
+	TokenSource        oauth2.TokenSource
+	SelectedAuthMethod string
 }
 
 // GetConnectorFunc is a function type that creates a connector instance.
@@ -35,7 +36,8 @@ func WithSessionCache(ctx context.Context, constructor sessions.SessionStoreCons
 }
 
 type ConnectorOpts struct {
-	TokenSource oauth2.TokenSource
+	TokenSource        oauth2.TokenSource
+	SelectedAuthMethod string
 }
 type NewConnector[T field.Configurable] func(ctx context.Context, cfg T, opts *ConnectorOpts) (connectorbuilder.ConnectorBuilderV2, []connectorbuilder.Opt, error)
 
@@ -221,7 +223,7 @@ func SetFlagsAndConstraints(command *cobra.Command, schema field.Configuration) 
 		}
 
 		// mark required
-		if f.Required {
+		if f.Required && len(schema.FieldGroups) == 0 {
 			if f.Variant == field.BoolVariant {
 				return fmt.Errorf("requiring %s of type %s does not make sense", f.FieldName, f.Variant)
 			}

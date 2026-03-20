@@ -19,6 +19,7 @@ const (
 
 func defaultLogFormat() any {
 	// If stdout is a TTY, use console format, otherwise use JSON
+	//nolint:gosec // os.Stdout.Fd() is a process-owned fd and safe for terminal detection.
 	if term.IsTerminal(int(os.Stdout.Fd())) {
 		return logging.LogFormatConsole
 	}
@@ -49,6 +50,12 @@ var (
 		WithHidden(true),
 		WithDescription("JSON-formatted object of map keys and values like '{ 'key': 'value' }'"),
 		WithPersistent(true), WithExportTarget(ExportTargetNone))
+	createAccountResourceTypeField = StringField("create-account-resource-type",
+		WithHidden(true),
+		WithDescription("The resource type ID of the account to create"),
+		WithPersistent(true),
+		WithExportTarget(ExportTargetNone),
+	)
 	deleteResourceField     = StringField("delete-resource", WithHidden(true), WithDescription("The id of the resource to delete"), WithPersistent(true), WithExportTarget(ExportTargetNone))
 	deleteResourceTypeField = StringField("delete-resource-type", WithHidden(true), WithDescription("The type of the resource to delete"), WithPersistent(true), WithExportTarget(ExportTargetNone))
 	eventFeedField          = StringField("event-feed", WithHidden(true), WithDescription("Read feed events to stdout"), WithPersistent(true), WithExportTarget(ExportTargetNone))
@@ -88,19 +95,34 @@ var (
 		WithDescription("The timestamp indicating when debug-level logging should expire"),
 		WithPersistent(true),
 		WithExportTarget(ExportTargetOps))
-	skipFullSync              = BoolField("skip-full-sync", WithDescription("This must be set to skip a full sync"), WithPersistent(true), WithExportTarget(ExportTargetNone))
+	skipFullSync     = BoolField("skip-full-sync", WithDescription("This must be set to skip a full sync"), WithPersistent(true), WithExportTarget(ExportTargetNone))
+	WorkerCountField = IntField("workers",
+		WithDescription("The number of sync workers to use. -1 for auto-detect, 0 for sequential, >0 for parallel"),
+		WithDefaultValue(0),
+		WithPersistent(true),
+		WithExportTarget(ExportTargetNone))
+	ParallelSyncField         = BoolField("parallel-sync", WithDescription("Deprecated: use --workers instead."), WithPersistent(true), WithExportTarget(ExportTargetNone))
 	targetedSyncResourceIDs   = StringSliceField("sync-resources", WithDescription("The resource IDs to sync"), WithPersistent(true), WithExportTarget(ExportTargetNone))
 	skipEntitlementsAndGrants = BoolField("skip-entitlements-and-grants",
 		WithDescription("This must be set to skip syncing of entitlements and grants"),
 		WithPersistent(true),
 		WithExportTarget(ExportTargetNone),
 	)
+
+	authMethod = StringField(
+		"auth-method",
+		WithDescription(""),
+		WithPersistent(true),
+		WithExportTarget(ExportTargetNone),
+	)
+
 	skipGrants = BoolField("skip-grants",
 		WithDescription("This must be set to skip syncing of grants only (entitlements will still be synced)"),
 		WithPersistent(true),
 		WithExportTarget(ExportTargetNone),
 		WithHidden(true),
 	)
+
 	syncResourceTypeIDs = StringSliceField("sync-resource-types",
 		WithDescription("The resource type IDs to sync"),
 		WithPersistent(true),
@@ -157,6 +179,52 @@ var (
 		WithExportTarget(ExportTargetNone),
 	)
 	invokeActionArgsField = StringField("invoke-action-args",
+		WithHidden(true),
+		WithDescription("JSON-formatted object of map keys and values like '{ 'key': 'value' }'"),
+		WithDefaultValue("{}"),
+		WithPersistent(true),
+		WithExportTarget(ExportTargetNone),
+	)
+	invokeActionResourceTypeField = StringField("invoke-action-resource-type",
+		WithHidden(true),
+		WithDescription("The resource type ID for resource-scoped actions"),
+		WithPersistent(true),
+		WithExportTarget(ExportTargetNone),
+	)
+
+	listActionSchemasField = BoolField("list-action-schemas",
+		WithHidden(true),
+		WithDescription("List available action schemas"),
+		WithPersistent(true),
+		WithExportTarget(ExportTargetNone),
+	)
+	listActionSchemasResourceTypeField = StringField("list-action-schemas-resource-type",
+		WithHidden(true),
+		WithDescription("Filter action schemas by resource type ID"),
+		WithPersistent(true),
+		WithExportTarget(ExportTargetNone),
+	)
+
+	listResourceActionsField = StringField("list-resource-actions",
+		WithDescription("The resource type ID to list actions for"),
+		WithHidden(true),
+		WithPersistent(true),
+		WithExportTarget(ExportTargetNone),
+	)
+
+	invokeResourceActionField = StringField("invoke-resource-action",
+		WithDescription("The name of the action to invoke"),
+		WithHidden(true),
+		WithPersistent(true),
+		WithExportTarget(ExportTargetNone),
+	)
+	invokeResourceActionTypeField = StringField("invoke-resource-action-resource-type",
+		WithDescription("The resource type of the action to invoke"),
+		WithHidden(true),
+		WithPersistent(true),
+		WithExportTarget(ExportTargetNone),
+	)
+	invokeResourceActionArgsField = StringField("invoke-resource-action-args",
 		WithHidden(true),
 		WithDescription("JSON-formatted object of map keys and values like '{ 'key': 'value' }'"),
 		WithDefaultValue("{}"),
@@ -222,6 +290,41 @@ var (
 		WithRequired(true),
 		WithDescription("The expected audience claim in the JWT (optional)"),
 		WithExportTarget(ExportTargetNone))
+
+	ServerSessionStoreMaximumSizeField = IntField("session-store-maximum-size",
+		WithDescription("The maximum size of the local in-memory session store cache in bytes."),
+		WithDefaultValue(1024*1024*15),
+		WithExportTarget(ExportTargetOps),
+		WithHidden(true),
+		WithPersistent(true))
+
+	healthCheckField = BoolField("health-check",
+		WithDescription("Enable the HTTP health check endpoint"),
+		WithDefaultValue(false),
+		WithPersistent(true),
+		WithExportTarget(ExportTargetOps))
+
+	healthCheckPortField = IntField("health-check-port",
+		WithDescription("Port for the HTTP health check endpoint"),
+		WithDefaultValue(8081),
+		WithPersistent(true),
+		WithExportTarget(ExportTargetOps))
+
+	healthCheckBindAddressField = StringField("health-check-bind-address",
+		WithDescription("Bind address for health check server (127.0.0.1 for localhost-only)"),
+		WithDefaultValue("127.0.0.1"),
+		WithPersistent(true),
+		WithHidden(true),
+		WithExportTarget(ExportTargetOps))
+
+	HttpTimeoutField = IntField("http-timeout-seconds",
+		WithDescription("HTTP client timeout in seconds (max 1800)"),
+		WithDefaultValue(300),
+		WithPersistent(true),
+		WithExportTarget(ExportTargetOps),
+		WithInt(func(r *IntRuler) {
+			r.Gte(1).Lte(1800)
+		}))
 )
 
 func LambdaServerFields() []SchemaField {
@@ -253,6 +356,7 @@ var DefaultFields = []SchemaField{
 	createAccountEmailField,
 	createAccountLoginField,
 	createAccountProfileField,
+	createAccountResourceTypeField,
 	deleteResourceField,
 	deleteResourceTypeField,
 	eventFeedField,
@@ -287,6 +391,16 @@ var DefaultFields = []SchemaField{
 	compactSyncsField,
 	invokeActionField,
 	invokeActionArgsField,
+	invokeActionResourceTypeField,
+	listActionSchemasField,
+	listActionSchemasResourceTypeField,
+	listResourceActionsField,
+	invokeResourceActionField,
+	invokeResourceActionTypeField,
+	invokeResourceActionArgsField,
+	ServerSessionStoreMaximumSizeField,
+	WorkerCountField,
+	ParallelSyncField,
 
 	otelCollectorEndpoint,
 	otelCollectorEndpointTLSCertPath,
@@ -294,6 +408,14 @@ var DefaultFields = []SchemaField{
 	otelCollectorEndpointTlSInsecure,
 	otelTracingDisabled,
 	otelLoggingDisabled,
+
+	authMethod,
+
+	healthCheckField,
+	healthCheckPortField,
+	healthCheckBindAddressField,
+
+	HttpTimeoutField,
 }
 
 func IsFieldAmongDefaultList(f SchemaField) bool {

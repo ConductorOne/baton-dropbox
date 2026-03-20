@@ -17,6 +17,7 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/session"
 	"github.com/conductorone/baton-sdk/pkg/ugrpc"
 	"github.com/go-jose/go-jose/v4"
+	"github.com/maypok86/otter/v2"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -42,6 +43,7 @@ func OptionallyAddLambdaCommand[T field.Configurable](
 	getconnector GetConnectorFunc2[T],
 	connectorSchema field.Configuration,
 	mainCmd *cobra.Command,
+	sessionStoreEnabled bool,
 ) error {
 	lambdaSchema := field.NewConfiguration(field.LambdaServerFields(), field.WithConstraints(field.LambdaServerRelationships...))
 
@@ -174,7 +176,28 @@ func OptionallyAddLambdaCommand[T field.Configurable](
 			}
 		}
 
-		if err := field.Validate(connectorSchema, t); err != nil {
+		configStructMap := configStruct.AsMap()
+
+		var (
+			fieldOptions  []field.Option
+			schemaFields  []field.SchemaField
+			authMethodStr string
+		)
+		if authMethod, ok := configStructMap["auth-method"]; ok {
+			if authMethodStr, ok = authMethod.(string); ok {
+				fieldOptions = append(fieldOptions, field.WithAuthMethod(authMethodStr))
+			}
+		}
+		schemaFieldsMap := connectorSchema.FieldGroupFields(authMethodStr)
+		for _, field := range schemaFieldsMap {
+			schemaFields = append(schemaFields, field)
+		}
+
+		if len(schemaFields) == 0 {
+			schemaFields = connectorSchema.Fields
+		}
+
+		if err := field.Validate(connectorSchema, t, fieldOptions...); err != nil {
 			return fmt.Errorf("lambda-run: failed to validate config: %w", err)
 		}
 
@@ -186,12 +209,27 @@ func OptionallyAddLambdaCommand[T field.Configurable](
 			}
 			runCtx = context.WithValue(runCtx, crypto.ContextClientSecretKey, secretJwk)
 		}
-
+		sessionStoreMaximumSize := v.GetInt(field.ServerSessionStoreMaximumSizeField.GetName())
+		var sessionStoreConstructor sessions.SessionStoreConstructor
+		if sessionStoreEnabled {
+			sessionStoreConstructor = createSessionCacheConstructor(grpcClient)
+		} else {
+			sessionStoreConstructor = func(ctx context.Context, opt ...sessions.SessionStoreConstructorOption) (sessions.SessionStore, error) {
+				return &session.NoOpSessionStore{}, nil
+			}
+		}
 		ops := RunTimeOpts{
-			SessionStore: &lazySessionStore{constructor: createSessionCacheConstructor(grpcClient)},
+			SessionStore: NewLazyCachingSessionStore(sessionStoreConstructor, func(otterOptions *otter.Options[string, []byte]) {
+				if sessionStoreMaximumSize <= 0 {
+					otterOptions.MaximumWeight = 0
+				} else {
+					otterOptions.MaximumWeight = uint64(sessionStoreMaximumSize)
+				}
+			}),
+			SelectedAuthMethod: authMethodStr,
 		}
 
-		if hasOauthField(connectorSchema.Fields) {
+		if hasOauthField(schemaFields) {
 			ops.TokenSource = &lambdaTokenSource{
 				ctx:    runCtx,
 				webKey: webKey,
@@ -256,9 +294,14 @@ type lambdaTokenSource struct {
 	ctx    context.Context
 	webKey *jose.JSONWebKey
 	client v1.ConnectorConfigServiceClient
+	token  *oauth2.Token
 }
 
 func (s *lambdaTokenSource) Token() (*oauth2.Token, error) {
+	if s.token.Valid() {
+		return s.token, nil
+	}
+
 	resp, err := s.client.GetConnectorOauthToken(s.ctx, &v1.GetConnectorOauthTokenRequest{})
 	if err != nil {
 		return nil, err
@@ -279,6 +322,8 @@ func (s *lambdaTokenSource) Token() (*oauth2.Token, error) {
 	if err != nil {
 		return nil, fmt.Errorf("lambda-run: failed to unmarshal decrypted config: %w", err)
 	}
+
+	s.token = &t
 	return &t, nil
 }
 
