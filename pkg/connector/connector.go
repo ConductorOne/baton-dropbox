@@ -20,9 +20,11 @@ import (
 )
 
 var _ connectorbuilder.GlobalActionProvider = (*Connector)(nil)
+var _ connectorbuilder.EventFeedsLimited = (*Connector)(nil)
 
 type Connector struct {
-	client *dropbox.Client
+	client            *dropbox.Client
+	syncUserLastLogin bool
 }
 
 // Option is a function that configures a Connector.
@@ -51,6 +53,15 @@ func WithRefreshToken(ctx context.Context, appKey, appSecret, refreshToken, base
 		}
 		client.TokenSource = oauth2.StaticTokenSource(&oauth2.Token{AccessToken: accessToken})
 		c.client = client
+		return nil
+	}
+}
+
+// WithSyncUserLastLogin enables emitting last-login usage events derived from
+// the Dropbox team event log. Requires the events.read scope.
+func WithSyncUserLastLogin(enabled bool) Option {
+	return func(c *Connector) error {
+		c.syncUserLastLogin = enabled
 		return nil
 	}
 }
@@ -106,7 +117,7 @@ func NewLambdaConnector(ctx context.Context, dropboxCfg *cfg.Dropbox, cliOpts *c
 		)
 	}
 
-	cb, err := New(ctx, opts)
+	cb, err := New(ctx, opts, WithSyncUserLastLogin(dropboxCfg.SyncUserLastLogin))
 	if err != nil {
 		l.Error("error creating connector", zap.Error(err))
 		return nil, nil, err
@@ -168,6 +179,23 @@ func (c *Connector) ResourceSyncers(ctx context.Context) []connectorbuilder.Reso
 		newGroupBuilder(c.client),
 		newLicenseBuilder(),
 		// newFolderBuilder(c.client), // WIP
+		newAppBuilder(),
+	}
+}
+
+// EventFeeds returns the login usage event feed when sync-user-last-login is
+// enabled. Dropbox has no last_login field on team members; this is the only
+// way to observe sign-in activity (see team_log/get_events).
+func (c *Connector) EventFeeds(ctx context.Context) []connectorbuilder.EventFeed {
+	if !c.syncUserLastLogin {
+		return nil
+	}
+
+	l := ctxzap.Extract(ctx)
+	l.Debug("dropbox-connector: sync-user-last-login enabled, adding login event feed")
+
+	return []connectorbuilder.EventFeed{
+		newLoginEventFeed(c.client),
 	}
 }
 

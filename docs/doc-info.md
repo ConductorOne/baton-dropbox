@@ -8,8 +8,14 @@
    This connector syncs:  
    — Users (Dropbox Team members with full profile information including status and membership type)  
    — Roles (Dropbox Team admin roles for access management)  
-   — Groups (Dropbox Team groups with member information)  
+   — Groups (Dropbox Team groups with member information)    
    — Licenses (each Team member's seat type — full or limited — surfaced as a license resource with an "assigned" grant per user)
+   — Apps (a single static "Dropbox" resource used as the target of last-login usage events)
+
+   When the `--sync-user-last-login` flag is enabled, the connector additionally emits
+   last-login usage events derived from the Dropbox team event log (`team_log/get_events`),
+   since Dropbox has no `last_login` field on team members. This requires the `events.read`
+   scope and is disabled by default (see Connector credentials below).
 
 2. **Can the connector provision any resources? If so, which ones?**  
    The connector can provision:  
@@ -104,6 +110,7 @@
      - **`members.write`**: Create and modify team members
      - **`members.delete`**: Remove team members
      - **`groups.write`**: Manage group memberships
+     - **`events.read`**: Read the team event audit log (only needed if `--sync-user-last-login` is enabled)
 
      **Required Scopes by Operation:**
 
@@ -120,13 +127,20 @@
      - `members.delete` - Remove team members from the organization
      - `groups.write` - Add/remove users from groups
 
+     **For Usage Events (`--sync-user-last-login`, optional):**
+
+     - `events.read` - Read the team event log to derive last-login usage events. Adding
+       this scope after the app was first authorized requires re-authorizing the app
+       (re-running `--configure` or re-authorizing via OAuth) to obtain a token that carries it.
+
    - **Is the list of scopes or permissions different to sync (read) versus provision (read-write)?**  
      Yes, different scopes are required:
 
      **Syncing Only**: Requires `team_data.member`, `team_data.governance`, `team_info.read`  
-     **Provisioning**: Requires all sync scopes PLUS `members.write`, `members.delete`, `groups.write`
+     **Provisioning**: Requires all sync scopes PLUS `members.write`, `members.delete`, `groups.write`  
+     **Usage Events (optional)**: Requires `events.read`
 
-     **Recommendation**: For full functionality including provisioning, grant all scopes listed above. The connector will only use provisioning permissions when the `--provisioning` flag is enabled.
+     **Recommendation**: For full functionality including provisioning, grant all scopes listed above. The connector will only use provisioning permissions when the `--provisioning` flag is enabled, and will only use the `events.read` scope when `--sync-user-last-login` is enabled.
 
    - **What level of access or permissions does the user need in order to create the credentials?**  
      The user must have **Team Admin** role in Dropbox to:

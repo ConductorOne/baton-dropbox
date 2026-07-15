@@ -69,3 +69,11 @@ func capabilityPermissions(permissions ...string) *v2.CapabilityPermissions {
 	}
 	return v2.CapabilityPermissions_builder{Permissions: perms}.Build()
 }
+
+// appResourceType represents the single, static "Dropbox" app resource that
+// loginEventFeed's usage events target. Always synced; see app.go.
+var appResourceType = &v2.ResourceType{
+	Id:          "app",
+	DisplayName: "App",
+	Traits:      []v2.ResourceType_Trait{v2.ResourceType_TRAIT_APP},
+}

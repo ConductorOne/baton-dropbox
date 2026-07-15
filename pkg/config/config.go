@@ -44,6 +44,14 @@ var (
 		field.WithDescription("Override the Dropbox API URL (for testing)"),
 		field.WithHidden(true),
 	)
+	SyncUserLastLoginField = field.BoolField(
+		"sync-user-last-login",
+		field.WithDisplayName("Sync user last login"),
+		field.WithDescription("Emit last-login usage events derived from the Dropbox team event log "+
+			"(team_log/get_events). Requires the \"Team event log\" (events.read) permission scope "+
+			"to be enabled on the Dropbox app, which requires re-authorizing the app."),
+		field.WithDefaultValue(false),
+	)
 	// ConfigurationFields defines the external configuration required for the
 	// connector to run. Note: these fields can be marked as optional or
 	// required.
@@ -54,6 +62,7 @@ var (
 		ConfigureField,
 		Oauth2TokenField,
 		BaseURLField,
+		SyncUserLastLoginField,
 	}
 )
 
