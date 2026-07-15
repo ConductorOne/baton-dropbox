@@ -63,7 +63,7 @@ func (c *Client) RequestAccessTokenUsingRefreshToken(ctx context.Context) (strin
 }
 
 func (c *Client) Authorize(ctx context.Context, appKey, appSecret string) (string, error) {
-	isTTY := term.IsTerminal(int(os.Stdout.Fd()))
+	isTTY := term.IsTerminal(int(os.Stdout.Fd())) //nolint:gosec // stdout fd is always a small non-negative value, cannot overflow int
 	if !isTTY {
 		return "", fmt.Errorf("dropbox-connector: non-interactive mode not supported. Pass a refresh token as an argument ")
 	}
