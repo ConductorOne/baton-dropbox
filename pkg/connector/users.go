@@ -9,6 +9,7 @@ import (
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
+	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	resourceSdk "github.com/conductorone/baton-sdk/pkg/types/resource"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
@@ -36,12 +37,13 @@ func mapUserStatus(status dropbox.Tag) v2.UserTrait_Status_Status {
 
 func userResource(user dropbox.Profile, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
 	profile := map[string]interface{}{
-		"id":             user.AccountID,
-		"email":          user.Email,
-		"first_name":     user.Name.GivenName,
-		"last_name":      user.Name.Surname,
-		"team_member_id": user.TeamMemberID,
-		"status":         user.Status.Tag,
+		"id":              user.AccountID,
+		"email":           user.Email,
+		"first_name":      user.Name.GivenName,
+		"last_name":       user.Name.Surname,
+		"team_member_id":  user.TeamMemberID,
+		"status":          user.Status.Tag,
+		"membership_type": user.MembershipType.Tag,
 	}
 
 	userStatus := mapUserStatus(user.Status)
@@ -119,9 +121,34 @@ func (o *userBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ r
 	return nil, nil, nil
 }
 
-// Grants always returns an empty slice for users since they don't have any entitlements.
+// Grants emits the license grant derived from the user's membership_type,
+// stashed on the profile during List. Only "full" members consume a license
+// seat; other membership types (e.g. "limited") produce no grant.
 func (o *userBuilder) Grants(ctx context.Context, resource *v2.Resource, _ resourceSdk.SyncOpAttrs) ([]*v2.Grant, *resourceSdk.SyncOpResults, error) {
-	return nil, nil, nil
+	userTrait, err := resourceSdk.GetUserTrait(resource)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error getting user trait: %w", err)
+	}
+
+	var membershipType string
+	if profile := userTrait.GetProfile(); profile != nil {
+		if value, ok := profile.AsMap()["membership_type"].(string); ok {
+			membershipType = value
+		}
+	}
+
+	if membershipType != fullLicenseType {
+		return nil, nil, nil
+	}
+
+	licenseRes, err := licenseResource(fullLicenseType)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error building license resource: %w", err)
+	}
+
+	return []*v2.Grant{
+		grant.NewGrant(licenseRes, licenseAssigned, resource.Id),
+	}, nil, nil
 }
 
 func newUserBuilder(client *dropbox.Client) *userBuilder {
