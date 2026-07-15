@@ -200,3 +200,86 @@ type AddToGroupMembers struct {
 	AccessLevel Tag             `json:"access_type"` // union tag: "member" or "owner"
 	User        TeamMemberIdTag `json:"user"`
 }
+
+// Events
+
+// TimestampFormat is the format Dropbox uses for timestamps in team_log events
+// (always UTC, e.g. "2024-01-02T15:04:05Z").
+const TimestampFormat = "2006-01-02T15:04:05Z"
+
+// EventCategoryTag represents the event_category union discriminator used to
+// filter team_log/get_events requests (e.g. {".tag": "logins"}).
+type EventCategoryTag struct {
+	Tag string `json:".tag"`
+}
+
+// TimeRange represents an optional start/end time window for team_log/get_events.
+type TimeRange struct {
+	StartTime string `json:"start_time,omitempty"`
+	EndTime   string `json:"end_time,omitempty"`
+}
+
+// GetTeamEventsBody represents the request body for team_log/get_events.
+type GetTeamEventsBody struct {
+	Limit    int               `json:"limit,omitempty"`
+	Category *EventCategoryTag `json:"category,omitempty"`
+	Time     *TimeRange        `json:"time,omitempty"`
+}
+
+// GetTeamEventsContinueBody represents the request body for team_log/get_events/continue.
+type GetTeamEventsContinueBody struct {
+	Cursor string `json:"cursor"`
+}
+
+// GetTeamEventsPayload represents the response from team_log/get_events and
+// team_log/get_events/continue.
+type GetTeamEventsPayload struct {
+	Events  []TeamEvent `json:"events"`
+	Cursor  string      `json:"cursor"`
+	HasMore bool        `json:"has_more"`
+}
+
+// TeamEvent represents a single entry in the Dropbox team event audit log.
+// Only the fields needed to derive last-login usage events are modeled; the
+// full Dropbox EventDetails union is not parsed.
+type TeamEvent struct {
+	Timestamp     string       `json:"timestamp"`
+	EventCategory Tag          `json:"event_category"`
+	EventType     Tag          `json:"event_type"`
+	Actor         ActorLogInfo `json:"actor"`
+}
+
+// ActorLogInfo represents the entity who performed a team log event. Only the
+// "user" and "admin" variants are parsed (both wrap a UserLogInfo — Dropbox
+// logs a team member's own actions under "admin" instead of "user" when that
+// member has admin permissions); other actor kinds (app, dropbox, anonymous,
+// reseller) are ignored by callers.
+type ActorLogInfo struct {
+	Tag   string       `json:".tag"`
+	User  *UserLogInfo `json:"user,omitempty"`
+	Admin *UserLogInfo `json:"admin,omitempty"`
+}
+
+// UserLogInfo returns the team member behind this event, whether they acted
+// as a plain "user" or as an "admin" (Dropbox logs a team member's own
+// actions under "admin" instead of "user" when that member has admin
+// permissions). Returns nil for any other actor kind (app, dropbox,
+// anonymous, reseller).
+func (a ActorLogInfo) UserInfo() *UserLogInfo {
+	switch a.Tag {
+	case "user":
+		return a.User
+	case "admin":
+		return a.Admin
+	default:
+		return nil
+	}
+}
+
+// UserLogInfo identifies the team member associated with a team log event.
+type UserLogInfo struct {
+	AccountID    string `json:"account_id"`
+	TeamMemberID string `json:"team_member_id"`
+	Email        string `json:"email"`
+	DisplayName  string `json:"display_name"`
+}
