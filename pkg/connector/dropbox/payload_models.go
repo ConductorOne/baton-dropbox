@@ -83,6 +83,35 @@ type Profile struct {
 	Status       Tag      `json:"status"`
 }
 
+// Last Login (Team Audit Log)
+
+// EventTypeArg is the union selector used to filter get_events by a single event type.
+// For last-login we filter on "login_success".
+type EventTypeArg struct {
+	Tag string `json:".tag"`
+}
+
+// GetEventsBody represents the request body for /2/team_log/get_events.
+// AccountID filters to events where the member is the Actor, Context, or Participant.
+type GetEventsBody struct {
+	Limit     int           `json:"limit"`
+	AccountID string        `json:"account_id,omitempty"`
+	EventType *EventTypeArg `json:"event_type,omitempty"`
+}
+
+// GetEventsPayload represents the response from /2/team_log/get_events.
+type GetEventsPayload struct {
+	Events  []EventEntry `json:"events"`
+	Cursor  string       `json:"cursor"`
+	HasMore bool         `json:"has_more"`
+}
+
+// EventEntry is a single audit-log event. Timestamp is RFC3339 (e.g. "2020-01-01T00:00:00Z").
+type EventEntry struct {
+	Timestamp string `json:"timestamp"`
+	EventType Tag    `json:"event_type"`
+}
+
 // Account Provisioning
 
 // AddMemberRequest represents the request body for adding team members.

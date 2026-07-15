@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
@@ -181,6 +182,67 @@ func (c *Client) UnsuspendMember(ctx context.Context, teamMemberID string) (*v2.
 	}
 
 	return getRateLimitFromAnnos(annos), nil
+}
+
+// getEventsPageLimit is the max results per get_events page (Dropbox allows up to 1000).
+const getEventsPageLimit = 1000
+
+// GetLastLogin returns the timestamp of a member's most recent successful login.
+// Dropbox has no last-login field on member endpoints, so it is derived from the team
+// audit log (POST /2/team_log/get_events, filtered to login_success). Returns
+// (nil, rl, nil) when there is no login within the audit retention window — a normal
+// "unknown", not an error. Requires the events.read scope.
+func (c *Client) GetLastLogin(ctx context.Context, accountID string) (*time.Time, *v2.RateLimitDescription, error) {
+	body := GetEventsBody{
+		Limit:     getEventsPageLimit,
+		AccountID: accountID,
+		EventType: &EventTypeArg{Tag: "login_success"},
+	}
+
+	var latest *time.Time
+	trackLatest := func(events []EventEntry) error {
+		for _, e := range events {
+			t, perr := time.Parse(time.RFC3339, e.Timestamp)
+			if perr != nil {
+				return fmt.Errorf("failed to parse login timestamp %q: %w", e.Timestamp, perr)
+			}
+			if latest == nil || t.After(*latest) {
+				tCopy := t
+				latest = &tCopy
+			}
+		}
+		return nil
+	}
+
+	result := &GetEventsPayload{}
+	annos, err := c.doRequest(ctx, c.url("/2/team_log/get_events"), http.MethodPost, result, body)
+	rl := getRateLimitFromAnnos(annos)
+	if err != nil {
+		return nil, rl, fmt.Errorf("failed to get login events for %s: %w", accountID, err)
+	}
+	if err := trackLatest(result.Events); err != nil {
+		return nil, rl, err
+	}
+
+	// Dropbox returns events oldest-first with no descending option, so page through all
+	// of the member's login_success events and keep the max timestamp.
+	for result.HasMore {
+		contBody := struct {
+			Cursor string `json:"cursor"`
+		}{Cursor: result.Cursor}
+
+		result = &GetEventsPayload{}
+		annos, err = c.doRequest(ctx, c.url("/2/team_log/get_events/continue"), http.MethodPost, result, contBody)
+		rl = getRateLimitFromAnnos(annos)
+		if err != nil {
+			return nil, rl, fmt.Errorf("failed to page login events for %s: %w", accountID, err)
+		}
+		if err := trackLatest(result.Events); err != nil {
+			return nil, rl, err
+		}
+	}
+
+	return latest, rl, nil
 }
 
 // getRateLimitFromAnnos extracts rate limit data from annotations.

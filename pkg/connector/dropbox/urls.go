@@ -46,6 +46,16 @@ const (
 	// Permission: Team member management.
 	UnsuspendMemberURL = BaseURL + "/2/team/members/unsuspend"
 
+	// Team Audit Log Endpoints
+	// Documentation: https://www.dropbox.com/developers/documentation/http/teams#team-team_log-get_events
+
+	// GetEventsURL returns team audit log events; used to derive each member's last login
+	// from the most recent "login_success" event.
+	// Docs: https://www.dropbox.com/developers/documentation/http/teams#team-team_log-get_events
+	// Required Scope: events.read
+	// Permission: Team Auditing.
+	GetEventsURL = BaseURL + "/2/team_log/get_events"
+
 	// Role Management Endpoints
 	// Documentation: https://www.dropbox.com/developers/documentation/http/teams#team-members-set_admin_permissions
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/conductorone/baton-dropbox/pkg/connector/dropbox"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
@@ -34,7 +35,7 @@ func mapUserStatus(status dropbox.Tag) v2.UserTrait_Status_Status {
 	}
 }
 
-func userResource(user dropbox.Profile, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
+func userResource(user dropbox.Profile, lastLogin *time.Time, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
 	profile := map[string]interface{}{
 		"id":             user.AccountID,
 		"email":          user.Email,
@@ -51,6 +52,11 @@ func userResource(user dropbox.Profile, parentResourceID *v2.ResourceId) (*v2.Re
 		resourceSdk.WithDetailedStatus(userStatus, user.Status.Tag),
 		resourceSdk.WithUserProfile(profile),
 		resourceSdk.WithUserLogin(user.Email),
+	}
+
+	// lastLogin is nil when the member has no login within the audit log retention window.
+	if lastLogin != nil {
+		userTraitOptions = append(userTraitOptions, resourceSdk.WithLastLogin(*lastLogin))
 	}
 
 	return resourceSdk.NewUserResource(
@@ -94,7 +100,22 @@ func (o *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 	}
 
 	for _, user := range payload.Members {
-		resource, err := userResource(user.Profile, parentResourceID)
+		// Fetch last login per member from the audit log. This is one extra API call per
+		// user; on very large teams consider switching to a single bulk scan of the
+		// "logins" event category and joining by account_id client-side.
+		lastLogin, llRateLimit, llErr := o.GetLastLogin(ctx, user.Profile.AccountID)
+		outAnnotations.WithRateLimiting(llRateLimit)
+		if llErr != nil {
+			// Don't fail the whole sync if last login can't be fetched (e.g. missing
+			// events.read scope or a transient error) — sync the user without it.
+			logger.Warn("failed to fetch last login; syncing user without it",
+				zap.String("account_id", user.Profile.AccountID),
+				zap.Error(llErr),
+			)
+			lastLogin = nil
+		}
+
+		resource, err := userResource(user.Profile, lastLogin, parentResourceID)
 		if err != nil {
 			return nil, &resourceSdk.SyncOpResults{
 				Annotations: outAnnotations,
@@ -173,7 +194,8 @@ func (o *userBuilder) CreateAccount(
 	}
 
 	newUserProfile := response.Complete[0].Profile
-	newUserResource, err := userResource(newUserProfile, nil)
+	// A freshly created user has never logged in, so pass nil for last login.
+	newUserResource, err := userResource(newUserProfile, nil, nil)
 	if err != nil {
 		l.Error("error converting created user to resource", zap.Error(err))
 		return nil, nil, annos, err
