@@ -91,7 +91,7 @@ jobs:
       - name: Build baton-dropbox
         run: go build ./cmd/baton-dropbox
       - name: Get baton
-        uses: ConductorOne/github-workflows/actions/get-baton@v2
+        uses: ConductorOne/github-workflows/actions/get-baton@v4
       - name: Sync
         run: ./baton-dropbox
       - name: Check License resource exists
