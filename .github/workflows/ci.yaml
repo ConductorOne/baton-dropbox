@@ -74,6 +74,39 @@ jobs:
           connector: ./baton-dropbox
           account-email: "${{ vars.TEST_ACCOUNT_EMAIL }}"
           search-method: "email"
+  test-license:
+    runs-on: ubuntu-latest
+    env:
+      BATON_LOG_LEVEL: debug
+      BATON_REFRESH_TOKEN: ${{ secrets.BATON_REFRESH_TOKEN }}
+      BATON_APP_KEY: ${{ secrets.BATON_APP_KEY }}
+      BATON_APP_SECRET: ${{ secrets.BATON_APP_SECRET }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Build baton-dropbox
+        run: go build ./cmd/baton-dropbox
+      - name: Get baton
+        uses: ConductorOne/github-workflows/actions/get-baton@v2
+      - name: Sync
+        run: ./baton-dropbox
+      - name: Check License resource exists
+        run: |
+          baton resources --output-format=json | jq --exit-status \
+            '[.resources[]? | select(.resource.id.resourceType == "license" and .resource.id.resource == "full")] | length >= 1'
+      - name: Check License entitlement exists
+        run: |
+          baton entitlements --output-format=json | jq --exit-status \
+            '[.entitlements[]? | select(.entitlement.id == "license:full:assigned")] | length >= 1'
+      - name: Check a full-license team member holds the grant
+        run: |
+          baton grants --entitlement="license:full:assigned" --output-format=json | jq --exit-status \
+            --arg principal "${{ vars.TEST_LICENSE_PRINCIPAL }}" \
+            '[.grants[]? | select(.principal.id.resource == $principal)] | length >= 1'
   test-actions:
     runs-on: ubuntu-latest
     env:
