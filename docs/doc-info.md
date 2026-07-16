@@ -8,7 +8,8 @@
    This connector syncs:  
    — Users (Dropbox Team members with full profile information including status and membership type)  
    — Roles (Dropbox Team admin roles for access management)  
-   — Groups (Dropbox Team groups with member information)
+   — Groups (Dropbox Team groups with member information)  
+   — Licenses (each Team member's seat type — full or limited — surfaced as a license resource with an "assigned" grant per user)
 
 2. **Can the connector provision any resources? If so, which ones?**  
    The connector can provision:  
@@ -16,7 +17,9 @@
    — User deletion (Remove team members from the organization)  
    — User suspension/activation (Suspend and unsuspend user accounts)  
    — Group membership (Add/remove users from groups)  
-   — Role assignments (Assign/revoke admin roles to users)
+   — Role assignments (Assign/revoke admin roles to users)  
+
+   Licenses are read-only — Dropbox has no API to change a member's seat type, so this resource does not support provisioning.
 
 ---
 
