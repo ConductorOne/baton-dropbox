@@ -4,12 +4,19 @@ import (
 	"context"
 
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
+	entitlementSdk "github.com/conductorone/baton-sdk/pkg/types/entitlement"
 	resourceSdk "github.com/conductorone/baton-sdk/pkg/types/resource"
 )
 
 const (
 	dropboxAppResourceID  = "dropbox"
 	dropboxAppDisplayName = "Dropbox"
+
+	// appAccessEntitlement is the slug of the "access" entitlement on the
+	// Dropbox app resource. loginEventFeed's UsageEvents target this resource,
+	// and C1's usage uplift reads those usage principals through this
+	// entitlement (see baton-okta / baton-aws for the same pattern).
+	appAccessEntitlement = "access"
 )
 
 // appBuilder syncs a single, static "Dropbox" App resource. Dropbox has no
@@ -34,8 +41,22 @@ func (b *appBuilder) List(_ context.Context, _ *v2.ResourceId, _ resourceSdk.Syn
 	return []*v2.Resource{res}, &resourceSdk.SyncOpResults{}, nil
 }
 
-func (b *appBuilder) Entitlements(_ context.Context, _ *v2.Resource, _ resourceSdk.SyncOpAttrs) ([]*v2.Entitlement, *resourceSdk.SyncOpResults, error) {
-	return nil, nil, nil
+// Entitlements returns a single "access" assignment entitlement on the Dropbox
+// app resource. C1's usage uplift (uplift_entitlement_usage_v2) iterates an
+// app's App-trait entitlements and reads usage principals keyed to each
+// entitlement's resource, so loginEventFeed's UsageEvents only surface if this
+// entitlement exists. Grants are intentionally not emitted: the usage uplift
+// maps the login actor directly to a synced app user, not via a grant.
+func (b *appBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ resourceSdk.SyncOpAttrs) ([]*v2.Entitlement, *resourceSdk.SyncOpResults, error) {
+	return []*v2.Entitlement{
+		entitlementSdk.NewAssignmentEntitlement(
+			resource,
+			appAccessEntitlement,
+			entitlementSdk.WithGrantableTo(userResourceType),
+			entitlementSdk.WithDisplayName("Dropbox Access"),
+			entitlementSdk.WithDescription("Has access to Dropbox"),
+		),
+	}, &resourceSdk.SyncOpResults{}, nil
 }
 
 func (b *appBuilder) Grants(_ context.Context, _ *v2.Resource, _ resourceSdk.SyncOpAttrs) ([]*v2.Grant, *resourceSdk.SyncOpResults, error) {
