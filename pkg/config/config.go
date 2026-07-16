@@ -43,6 +43,7 @@ var (
 		"base-url",
 		field.WithDescription("Override the Dropbox API URL (for testing)"),
 		field.WithHidden(true),
+		field.WithExportTarget(field.ExportTargetCLIOnly),
 	)
 	SyncUserLastLoginField = field.BoolField(
 		"sync-user-last-login",
