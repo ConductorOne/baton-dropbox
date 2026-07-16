@@ -121,23 +121,29 @@ func (o *userBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ r
 	return nil, nil, nil
 }
 
-// Grants emits the license grant derived from the user's membership_type,
-// stashed on the profile during List. Only "full" members consume a license
-// seat; other membership types (e.g. "limited") produce no grant.
+// Grants emits the license grant derived from the user's membership_type and
+// status, both stashed on the profile during List. Only "full" members whose
+// status consumes a seat (active or suspended; see licenseSeatStatuses) produce
+// a grant. "limited" members, invited members (not yet joined), and removed
+// members (departed, only present because include_removed=true) produce none.
 func (o *userBuilder) Grants(ctx context.Context, resource *v2.Resource, _ resourceSdk.SyncOpAttrs) ([]*v2.Grant, *resourceSdk.SyncOpResults, error) {
 	userTrait, err := resourceSdk.GetUserTrait(resource)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error getting user trait: %w", err)
 	}
 
-	var membershipType string
+	var membershipType, status string
 	if profile := userTrait.GetProfile(); profile != nil {
-		if value, ok := profile.AsMap()["membership_type"].(string); ok {
+		profileMap := profile.AsMap()
+		if value, ok := profileMap["membership_type"].(string); ok {
 			membershipType = value
+		}
+		if value, ok := profileMap["status"].(string); ok {
+			status = value
 		}
 	}
 
-	if membershipType != fullLicenseType {
+	if membershipType != fullLicenseType || !licenseSeatStatuses[status] {
 		return nil, nil, nil
 	}
 
