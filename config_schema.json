@@ -122,11 +122,6 @@
       "stringField": {
         "type": "STRING_FIELD_TYPE_OAUTH2"
       }
-    },
-    {
-      "name": "base-url",
-      "description": "Override the Dropbox API URL (for testing)",
-      "stringField": {}
     }
   ],
   "displayName": "Dropbox v2",
