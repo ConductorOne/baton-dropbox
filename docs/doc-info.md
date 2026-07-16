@@ -104,10 +104,9 @@
 
      **Available Scopes:**
 
-     - **`team_data.member`**: Read team member information (basic profile, status, roles)
-     - **`team_data.governance`**: Read team governance data (roles, permissions)
-     - **`team_info.read`**: Read basic team information
-     - **`members.write`**: Create and modify team members
+     - **`members.read`**: Read team member information — profiles, status, roles, and membership types (team/members/list_v2)
+     - **`groups.read`**: Read groups and group memberships (team/groups/list, team/groups/members/list)
+     - **`members.write`**: Create and modify team members, suspend/unsuspend, and assign roles
      - **`members.delete`**: Remove team members
      - **`groups.write`**: Manage group memberships
      - **`events.read`**: Read the team event audit log (only needed if `--sync-user-last-login` is enabled)
@@ -116,14 +115,13 @@
 
      **For Syncing (Read-Only Operations):**
 
-     - `team_data.member` - Read user information and profiles
-     - `team_data.governance` - Read role definitions and assignments
-     - `team_info.read` - Read team structure and groups
+     - `members.read` - Read users, roles, and license/membership types
+     - `groups.read` - Read groups and group memberships
 
      **For Provisioning (Read-Write Operations):**
 
      - All sync scopes (above) - Read access for validation
-     - `members.write` - Create new team members and suspend/unsuspend accounts
+     - `members.write` - Create new team members, suspend/unsuspend accounts, and assign roles
      - `members.delete` - Remove team members from the organization
      - `groups.write` - Add/remove users from groups
 
@@ -136,7 +134,7 @@
    - **Is the list of scopes or permissions different to sync (read) versus provision (read-write)?**  
      Yes, different scopes are required:
 
-     **Syncing Only**: Requires `team_data.member`, `team_data.governance`, `team_info.read`  
+     **Syncing Only**: Requires `members.read`, `groups.read`  
      **Provisioning**: Requires all sync scopes PLUS `members.write`, `members.delete`, `groups.write`  
      **Usage Events (optional)**: Requires `events.read`
 
