@@ -28,13 +28,27 @@
           },
           {
             "@type": "type.googleapis.com/c1.connector.v2.SkipEntitlements"
+          },
+          {
+            "@type": "type.googleapis.com/c1.connector.v2.CapabilityPermissions",
+            "permissions": [
+              {
+                "permission": "team_data.member"
+              }
+            ]
           }
         ]
       },
       "capabilities": [
         "CAPABILITY_SYNC"
       ],
-      "permissions": {}
+      "permissions": {
+        "permissions": [
+          {
+            "permission": "team_data.member"
+          }
+        ]
+      }
     },
     {
       "resourceType": {

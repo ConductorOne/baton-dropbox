@@ -28,9 +28,26 @@ var roleResourceType = &v2.ResourceType{
 // limited seats). Grants are emitted by userBuilder.Grants from the
 // membership_type already fetched during user List(), not from this
 // builder, to avoid an O(N) user scan per license type.
+//
+// membership_type is part of the member profile returned by
+// team/members/list_v2, so reading it requires the team_data.member scope.
 var licenseResourceType = &v2.ResourceType{
 	Id:          "license",
 	DisplayName: "License",
 	Traits:      []v2.ResourceType_Trait{v2.ResourceType_TRAIT_LICENSE_PROFILE},
-	Annotations: annotations.New(&v2.SkipGrants{}, &v2.SkipEntitlements{}),
+	Annotations: annotations.New(
+		&v2.SkipGrants{},
+		&v2.SkipEntitlements{},
+		capabilityPermissions("team_data.member"),
+	),
+}
+
+// capabilityPermissions builds a CapabilityPermissions annotation listing the
+// downstream scopes required to sync a resource type.
+func capabilityPermissions(permissions ...string) *v2.CapabilityPermissions {
+	perms := make([]*v2.CapabilityPermission, 0, len(permissions))
+	for _, p := range permissions {
+		perms = append(perms, v2.CapabilityPermission_builder{Permission: p}.Build())
+	}
+	return v2.CapabilityPermissions_builder{Permissions: perms}.Build()
 }
