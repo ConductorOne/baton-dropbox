@@ -50,6 +50,7 @@ baton resources
 - Users
 - Roles
 - Groups
+- Licenses (each Dropbox Team member's seat type — full vs. limited — read-only)
 
 # Provisioning
 

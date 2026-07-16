@@ -75,12 +75,13 @@ type UserPayload struct {
 
 // Profile represents a user's profile information in Dropbox.
 type Profile struct {
-	AccountID    string   `json:"account_id"`
-	TeamMemberID string   `json:"team_member_id"`
-	Name         Name     `json:"name"`
-	Email        string   `json:"email"`
-	Groups       []string `json:"groups"`
-	Status       Tag      `json:"status"`
+	AccountID      string   `json:"account_id"`
+	TeamMemberID   string   `json:"team_member_id"`
+	Name           Name     `json:"name"`
+	Email          string   `json:"email"`
+	Groups         []string `json:"groups"`
+	Status         Tag      `json:"status"`
+	MembershipType Tag      `json:"membership_type"`
 }
 
 // Account Provisioning

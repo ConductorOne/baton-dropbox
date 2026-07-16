@@ -166,6 +166,7 @@ func (c *Connector) ResourceSyncers(ctx context.Context) []connectorbuilder.Reso
 		newUserBuilder(c.client),
 		newRoleBuilder(c.client),
 		newGroupBuilder(c.client),
+		newLicenseBuilder(),
 		// newFolderBuilder(c.client), // WIP
 	}
 }

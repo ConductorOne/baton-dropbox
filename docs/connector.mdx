@@ -13,8 +13,12 @@ sidebarTitle: "Dropbox"
 | Accounts | <Icon icon="square-check" iconType="solid"  color="#c937ae"/> | <Icon icon="square-check" iconType="solid"  color="#c937ae"/> |
 | Roles | <Icon icon="square-check" iconType="solid"  color="#c937ae"/> | <Icon icon="square-check" iconType="solid"  color="#c937ae"/> |
 | Groups | <Icon icon="square-check" iconType="solid"  color="#c937ae"/> | <Icon icon="square-check" iconType="solid"  color="#c937ae"/> |
+| Licenses | <Icon icon="square-check" iconType="solid"  color="#c937ae"/> | |
 
 The Dropbox connector supports [automatic account provisioning and deprovisioning](/product/admin/account-provisioning).
+
+**Notes:**
+- The Licenses resource reflects each Dropbox Team member's seat type (full vs. limited access to the shared quota). It's read-only: Dropbox does not expose an API to change a member's license type, so this resource does not support provisioning.
 
 ### Connector actions
 
