@@ -55,3 +55,46 @@ func TestUserBuilder_Grants_LimitedMembershipNoLicense(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, grants)
 }
+
+// TestUserBuilder_Grants_SeatStatusMatrix verifies that a license grant is
+// emitted only for full members whose status consumes a seat (active,
+// suspended) and never for invited/removed members — regardless of
+// membership_type — so departed and not-yet-joined members don't over-count
+// consumed seats. See CXP-763 / licenseSeatStatuses.
+func TestUserBuilder_Grants_SeatStatusMatrix(t *testing.T) {
+	cases := []struct {
+		status         string
+		membershipType string
+		wantGrant      bool
+	}{
+		{"active", "full", true},
+		{"suspended", "full", true},
+		{"invited", "full", false},
+		{"removed", "full", false},
+		{"active", "limited", false},
+		{"suspended", "limited", false},
+	}
+
+	o := &userBuilder{}
+	for _, tc := range cases {
+		t.Run(tc.status+"_"+tc.membershipType, func(t *testing.T) {
+			res, err := userResource(dropbox.Profile{
+				AccountID:      "acc",
+				TeamMemberID:   "dbmid:x",
+				Email:          "user@example.com",
+				Status:         dropbox.Tag{Tag: tc.status},
+				MembershipType: dropbox.Tag{Tag: tc.membershipType},
+			}, nil)
+			require.NoError(t, err)
+
+			grants, _, err := o.Grants(context.Background(), res, resourceSdk.SyncOpAttrs{})
+			require.NoError(t, err)
+			if tc.wantGrant {
+				require.Len(t, grants, 1)
+				require.Equal(t, "license:full:assigned", grants[0].Entitlement.Id)
+			} else {
+				require.Empty(t, grants)
+			}
+		})
+	}
+}

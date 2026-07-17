@@ -19,6 +19,22 @@ const licenseAssigned = "assigned"
 // is synced for them and no grant is emitted by userBuilder.Grants.
 const fullLicenseType = "full"
 
+// licenseSeatStatuses are the Dropbox member statuses that consume a license
+// seat, keyed by the raw member status tag. Active and suspended members
+// retain (and are billed for) their seat, so both count. Invited members have
+// not joined yet, and removed members have departed (they are only returned at
+// all because ListUsers sets include_removed=true) — neither consumes a seat,
+// so userBuilder.Grants emits no license grant for them even when their
+// membership_type is still "full".
+//
+// This must key off the raw status tag rather than the mapped UserTrait status
+// enum: active and invited both map to STATUS_ENABLED, so the enum cannot tell
+// a counted (active) member from an excluded (invited) one.
+var licenseSeatStatuses = map[string]bool{
+	"active":    true,
+	"suspended": true,
+}
+
 type licenseBuilder struct{}
 
 func (b *licenseBuilder) ResourceType(_ context.Context) *v2.ResourceType {

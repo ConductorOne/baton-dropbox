@@ -87,15 +87,13 @@ A user with the **Team Admin** role in Dropbox must perform this task.
   Give the app the relevant set of permissions:
 
   For syncing (read-only) operations:
-    - team_data.member - Read user information and profiles
-    - team_data.governance - Read role definitions and assignments
-    - team_info.read - Read team structure and groups
+    - members.read - Read team members, their profiles, roles, and membership types
+    - groups.read - Read groups and group memberships
 
   For provisioning (read-write) operations:
-    - team_data.member - Read user information and profiles
-    - team_data.governance - Read role definitions and assignments
-    - team_info.read - Read team structure and groups
-    - members.write - Create new team members and suspend/unsuspend accounts
+    - members.read - Read team members, their profiles, roles, and membership types
+    - groups.read - Read groups and group memberships
+    - members.write - Create new team members, suspend/unsuspend accounts, and assign roles
     - members.delete - Remove team members from the organization
     - groups.write - Add/remove users from groups
   </Step>
