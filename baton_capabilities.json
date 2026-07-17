@@ -13,7 +13,7 @@
             "@type": "type.googleapis.com/c1.connector.v2.CapabilityPermissions",
             "permissions": [
               {
-                "permission": "team_info.read"
+                "permission": "groups.read"
               },
               {
                 "permission": "groups.write"
@@ -29,7 +29,7 @@
       "permissions": {
         "permissions": [
           {
-            "permission": "team_info.read"
+            "permission": "groups.read"
           },
           {
             "permission": "groups.write"
@@ -55,7 +55,7 @@
             "@type": "type.googleapis.com/c1.connector.v2.CapabilityPermissions",
             "permissions": [
               {
-                "permission": "team_data.member"
+                "permission": "members.read"
               }
             ]
           }
@@ -67,7 +67,7 @@
       "permissions": {
         "permissions": [
           {
-            "permission": "team_data.member"
+            "permission": "members.read"
           }
         ]
       }
@@ -84,10 +84,7 @@
             "@type": "type.googleapis.com/c1.connector.v2.CapabilityPermissions",
             "permissions": [
               {
-                "permission": "team_data.member"
-              },
-              {
-                "permission": "team_data.governance"
+                "permission": "members.read"
               },
               {
                 "permission": "members.write"
@@ -103,10 +100,7 @@
       "permissions": {
         "permissions": [
           {
-            "permission": "team_data.member"
-          },
-          {
-            "permission": "team_data.governance"
+            "permission": "members.read"
           },
           {
             "permission": "members.write"
@@ -126,7 +120,7 @@
             "@type": "type.googleapis.com/c1.connector.v2.CapabilityPermissions",
             "permissions": [
               {
-                "permission": "team_data.member"
+                "permission": "members.read"
               },
               {
                 "permission": "members.write"
@@ -146,7 +140,7 @@
       "permissions": {
         "permissions": [
           {
-            "permission": "team_data.member"
+            "permission": "members.read"
           },
           {
             "permission": "members.write"
