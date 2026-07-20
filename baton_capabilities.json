@@ -7,6 +7,11 @@
         "displayName": "App",
         "traits": [
           "TRAIT_APP"
+        ],
+        "annotations": [
+          {
+            "@type": "type.googleapis.com/c1.connector.v2.SkipEntitlements"
+          }
         ]
       },
       "capabilities": [
@@ -170,8 +175,7 @@
     "CAPABILITY_SYNC",
     "CAPABILITY_ACCOUNT_PROVISIONING",
     "CAPABILITY_RESOURCE_DELETE",
-    "CAPABILITY_ACTIONS",
-    "CAPABILITY_EVENT_FEED_V2"
+    "CAPABILITY_ACTIONS"
   ],
   "credentialDetails": {
     "capabilityAccountProvisioning": {
