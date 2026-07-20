@@ -219,6 +219,57 @@ func TestLoginEventFeed_ListEvents_PaginatesUntilHasMoreFalse(t *testing.T) {
 	require.Equal(t, "dbmid:2", events[0].GetUsageEvent().ActorResource.Id.Resource)
 }
 
+func TestLoginEventFeed_ListEvents_AdvancesStartAtOnQuietTeam(t *testing.T) {
+	// A window containing login-category events but no successful logins (only
+	// logouts/failures). No usage events are emitted, but the high-water mark
+	// must still advance to the newest event so the next sync's StartAt moves
+	// forward instead of re-scanning a growing window.
+	payload := dropbox.GetTeamEventsPayload{
+		Events: []dropbox.TeamEvent{
+			{
+				Timestamp:     "2024-01-01T10:00:00Z",
+				EventCategory: dropbox.Tag{Tag: "logins"},
+				EventType:     dropbox.Tag{Tag: "login_fail"},
+				Actor: dropbox.ActorLogInfo{
+					Tag:  "user",
+					User: &dropbox.UserLogInfo{TeamMemberID: "dbmid:1"},
+				},
+			},
+			{
+				Timestamp:     "2024-01-01T10:30:00Z",
+				EventCategory: dropbox.Tag{Tag: "logins"},
+				EventType:     dropbox.Tag{Tag: "logout"},
+				Actor: dropbox.ActorLogInfo{
+					Tag:  "user",
+					User: &dropbox.UserLogInfo{TeamMemberID: "dbmid:2"},
+				},
+			},
+		},
+		Cursor:  "",
+		HasMore: false,
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		require.NoError(t, json.NewEncoder(w).Encode(payload))
+	}))
+	defer server.Close()
+
+	feed := newTestLoginEventFeed(t, server)
+
+	startAt := timestamppb.New(mustParseDropboxTime(t, "2024-01-01T00:00:00Z"))
+	events, streamState, _, err := feed.ListEvents(context.Background(), startAt, nil)
+	require.NoError(t, err)
+	require.Empty(t, events)
+	require.False(t, streamState.HasMore)
+
+	// StartAt for the next sync must advance to the newest event seen
+	// (the logout at 10:30), not remain pinned at the initial 00:00 default.
+	cursor, err := unmarshalLoginEventPageToken(&pagination.StreamToken{Cursor: streamState.Cursor}, nil)
+	require.NoError(t, err)
+	require.Equal(t, "2024-01-01T10:30:00Z", cursor.StartAt)
+}
+
 func mustParseDropboxTime(t *testing.T, s string) time.Time {
 	t.Helper()
 	ts, err := time.Parse(dropbox.TimestampFormat, s)

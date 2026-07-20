@@ -79,4 +79,10 @@ var appResourceType = &v2.ResourceType{
 	Id:          "app",
 	DisplayName: "App",
 	Traits:      []v2.ResourceType_Trait{v2.ResourceType_TRAIT_APP},
+	// appBuilder serves only a static "access" entitlement (StaticEntitlementSyncerV2)
+	// and no grants; skip the per-resource ListEntitlements/ListGrants the SDK would
+	// otherwise schedule, matching licenseResourceType above.
+	Annotations: annotations.New(
+		&v2.SkipEntitlements{},
+	),
 }

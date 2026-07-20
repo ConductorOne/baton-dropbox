@@ -133,6 +133,23 @@ func (f *loginEventFeed) ListEvents(
 
 	events := make([]*v2.Event, 0, len(payload.Events))
 	for _, e := range payload.Events {
+		occurredAt, parseErr := time.Parse(dropbox.TimestampFormat, e.Timestamp)
+		if parseErr != nil {
+			l.Debug("dropbox-connector: skipping login event with unparseable timestamp", zap.String("timestamp", e.Timestamp), zap.Error(parseErr))
+			continue
+		}
+		// Advance the high-water mark from the newest event of ANY type in the
+		// logins category, not just successful logins. Otherwise, on a team with
+		// no login_success events in the window, LatestEventSeen would never move
+		// past its initial now-24h default, so StartAt would never advance and
+		// every subsequent sync would re-scan an ever-growing [StartAt, now]
+		// window. Every event we see here has already been fully processed, so
+		// advancing past it cannot skip a login.
+		if occurredAt.After(latestEvent) {
+			latestEvent = occurredAt
+			cursor.LatestEventSeen = occurredAt.UTC().Format(dropbox.TimestampFormat)
+		}
+
 		// The "logins" category also includes logouts, failures, and password
 		// resets; only successful sign-ins count as usage.
 		if e.EventType.Tag != loginSuccessEventType {
@@ -145,16 +162,6 @@ func (f *loginEventFeed) ListEvents(
 		userInfo := e.Actor.UserInfo()
 		if userInfo == nil || userInfo.TeamMemberID == "" {
 			continue
-		}
-
-		occurredAt, parseErr := time.Parse(dropbox.TimestampFormat, e.Timestamp)
-		if parseErr != nil {
-			l.Debug("dropbox-connector: skipping login event with unparseable timestamp", zap.String("timestamp", e.Timestamp), zap.Error(parseErr))
-			continue
-		}
-		if occurredAt.After(latestEvent) {
-			latestEvent = occurredAt
-			cursor.LatestEventSeen = occurredAt.UTC().Format(dropbox.TimestampFormat)
 		}
 
 		userTrait, traitErr := resourceSdk.NewUserTrait(resourceSdk.WithEmail(userInfo.Email, true))
