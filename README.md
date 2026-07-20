@@ -51,6 +51,16 @@ baton resources
 - Roles
 - Groups
 - Licenses (each Dropbox Team member's seat type — full vs. limited — read-only)
+- Apps (a single static "Dropbox" resource; see Usage Events below)
+
+## Usage Events
+
+Dropbox has no `last_login` field on team members. When the `--sync-user-last-login` flag
+is enabled, the connector instead derives last-login activity from the Dropbox team event
+log (`team_log/get_events`), emitting a usage event for each successful sign-in. This
+requires the `events.read` scope on the Dropbox app, which requires re-authorizing the app
+if it wasn't originally granted. It is disabled by default because event log volume can be
+large on active teams.
 
 # Provisioning
 
@@ -102,6 +112,7 @@ Flags:
       --refresh-token string         The refresh token used to get an access token for authentication with Dropbox ($BATON_REFRESH_TOKEN)
       --app-key string               The app key used to authenticate with Dropbox ($BATON_APP_KEY)
       --app-secret string            The app secret used to authenticate with Dropbox ($BATON_APP_SECRET)
+      --sync-user-last-login bool    Emit last-login usage events derived from the Dropbox team event log ($BATON_SYNC_USER_LAST_LOGIN)
   -f, --file string                  The path to the c1z file to sync with ($BATON_FILE) (default "sync.c1z")
   -h, --help                         help for baton-dropbox
       --log-format string            The output format for logs: json, console ($BATON_LOG_FORMAT) (default "json")

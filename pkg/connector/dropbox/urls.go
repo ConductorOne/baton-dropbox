@@ -89,4 +89,17 @@ const (
 	// Required Scope: groups.write
 	// Permission: Team member management.
 	RemoveUserFromGroupURL = BaseURL + "/2/team/groups/members/remove"
+
+	// Event Log Endpoints
+	// Documentation: https://www.dropbox.com/developers/documentation/http/teams#team_log-get_events
+
+	// GetTeamEventsURL fetches a page of the team event audit log.
+	// Docs: https://www.dropbox.com/developers/documentation/http/teams#team_log-get_events
+	// Required Scope: events.read.
+	GetTeamEventsURL = BaseURL + "/2/team_log/get_events"
+
+	// GetTeamEventsContinueURL continues paginated event log listing.
+	// Docs: https://www.dropbox.com/developers/documentation/http/teams#team_log-get_events-continue
+	// Required Scope: events.read.
+	GetTeamEventsContinueURL = BaseURL + "/2/team_log/get_events/continue"
 )
