@@ -117,7 +117,10 @@ A user with the **Team Admin** role in Dropbox must perform this task.
     - groups.write - Add/remove users from groups
 
   Optional, only if enabling last-login usage events (`sync-user-last-login`):
-    - events.read - Read the team event log to derive last-login usage events
+    - events.read - Read the team event log to derive last-login usage events. If you add this
+      scope after the app was first authorized, re-authorize the app (re-run `--configure`, or
+      re-authorize via OAuth) to mint a token that carries it — an existing refresh token will
+      not gain the scope automatically.
   </Step>
   <Step>
   Click **Submit** to save the permissions.
