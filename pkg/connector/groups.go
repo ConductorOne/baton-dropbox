@@ -29,14 +29,13 @@ func groupResource(group dropbox.Group, parentResourceID *v2.ResourceId) (*v2.Re
 		group.Name,
 		groupResourceType,
 		group.GroupID,
-		[]resourceSdk.GroupTraitOption{
-			resourceSdk.WithGroupProfile(
-				map[string]interface{}{
-					"id":   group.GroupID,
-					"name": group.Name,
-				},
-			),
-		},
+		[]resourceSdk.GroupTraitOption{},
+		resourceSdk.WithResourceProfile(
+			map[string]interface{}{
+				"id":   group.GroupID,
+				"name": group.Name,
+			},
+		),
 		resourceSdk.WithParentResourceID(parentResourceID),
 	)
 }

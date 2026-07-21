@@ -27,15 +27,14 @@ func roleResource(role dropbox.Role, parentResourceID *v2.ResourceId) (*v2.Resou
 		role.Name,
 		roleResourceType,
 		role.RoleID,
-		[]resourceSdk.RoleTraitOption{
-			resourceSdk.WithRoleProfile(
-				map[string]interface{}{
-					"id":          role.RoleID,
-					"name":        role.Name,
-					"description": role.Description,
-				},
-			),
-		},
+		[]resourceSdk.RoleTraitOption{},
+		resourceSdk.WithResourceProfile(
+			map[string]interface{}{
+				"id":          role.RoleID,
+				"name":        role.Name,
+				"description": role.Description,
+			},
+		),
 		resourceSdk.WithParentResourceID(parentResourceID),
 	)
 }
