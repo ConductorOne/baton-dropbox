@@ -50,8 +50,6 @@ func userResource(user dropbox.Profile, parentResourceID *v2.ResourceId) (*v2.Re
 
 	userTraitOptions := []resourceSdk.UserTraitOption{
 		resourceSdk.WithEmail(user.Email, true),
-		resourceSdk.WithDetailedStatus(userStatus, user.Status.Tag),
-		resourceSdk.WithUserProfile(profile),
 		resourceSdk.WithUserLogin(user.Email),
 	}
 
@@ -60,6 +58,8 @@ func userResource(user dropbox.Profile, parentResourceID *v2.ResourceId) (*v2.Re
 		userResourceType,
 		user.TeamMemberID,
 		userTraitOptions,
+		resourceSdk.WithResourceStatus(v2.Status_ResourceStatus(userStatus), user.Status.Tag),
+		resourceSdk.WithResourceProfile(profile),
 		resourceSdk.WithParentResourceID(parentResourceID),
 	)
 }
@@ -127,13 +127,8 @@ func (o *userBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ r
 // a grant. "limited" members, invited members (not yet joined), and removed
 // members (departed, only present because include_removed=true) produce none.
 func (o *userBuilder) Grants(ctx context.Context, resource *v2.Resource, _ resourceSdk.SyncOpAttrs) ([]*v2.Grant, *resourceSdk.SyncOpResults, error) {
-	userTrait, err := resourceSdk.GetUserTrait(resource)
-	if err != nil {
-		return nil, nil, fmt.Errorf("error getting user trait: %w", err)
-	}
-
 	var membershipType, status string
-	if profile := userTrait.GetProfile(); profile != nil {
+	if profile := resource.GetProfile(); profile != nil {
 		profileMap := profile.AsMap()
 		if value, ok := profileMap["membership_type"].(string); ok {
 			membershipType = value
