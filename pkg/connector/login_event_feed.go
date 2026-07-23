@@ -24,7 +24,7 @@ const (
 
 	// defaultCatchUpWindow bounds how far back the first sync (or a sync
 	// recovering from a stale/expired cursor) reaches into the event log.
-	defaultCatchUpWindow = 24 * time.Hour
+	defaultCatchUpWindow = 60 * 24 * time.Hour
 )
 
 // loginEventFeed emits UsageEvents derived from Dropbox's team event audit log
