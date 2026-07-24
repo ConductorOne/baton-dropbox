@@ -101,40 +101,29 @@ func TestUserBuilder_Grants_SeatStatusMatrix(t *testing.T) {
 	}
 }
 
-// TestUserBuilder_Grants_LicenseSyncFiltered verifies that userBuilder.Grants
-// -- which emits license grants as a cross-type optimization -- emits nothing
-// when the customer's sync filter excludes the "license" resource type, even
-// for a full member whose status consumes a seat.
-func TestUserBuilder_Grants_LicenseSyncFiltered(t *testing.T) {
-	res, err := userResource(dropbox.Profile{
-		AccountID:      "acc-1",
-		TeamMemberID:   "dbmid:1",
-		Email:          "user@example.com",
-		Status:         dropbox.Tag{Tag: "active"},
-		MembershipType: dropbox.Tag{Tag: "full"},
-	}, nil)
-	require.NoError(t, err)
-
-	o := &userBuilder{syncLicenses: false}
-	grants, _, err := o.Grants(context.Background(), res, resourceSdk.SyncOpAttrs{})
-	require.NoError(t, err)
-	require.Empty(t, grants)
-}
-
-// TestUserBuilder_ResourceType_SkipsGrantsWhenLicenseFiltered verifies that
-// userResourceType carries a SkipGrants annotation when license sync is
-// filtered out, so the SDK skips calling ListGrants for user resources
-// entirely, while the default (license synced) case still exposes the
-// existing capability permission annotations unmodified.
-func TestUserBuilder_ResourceType_SkipsGrantsWhenLicenseFiltered(t *testing.T) {
+// TestUserBuilder_ResourceType_AnnotatesForSyncFilter verifies that the user
+// resource type is annotated to match what Grants will actually do: user
+// never has entitlements of its own, so SkipEntitlements is always present;
+// when license sync is filtered out, Grants' only output (the cross-type
+// license grant) never fires either, so SkipEntitlementsAndGrants is used
+// instead. The package-level userResourceType var must never be mutated,
+// since other builders (roles.go, groups.go, app.go, licenses.go) reference
+// it directly.
+func TestUserBuilder_ResourceType_AnnotatesForSyncFilter(t *testing.T) {
 	synced := &userBuilder{syncLicenses: true}
 	rt := synced.ResourceType(context.Background())
-	require.Same(t, userResourceType, rt)
+	require.NotSame(t, userResourceType, rt)
 	annos := annotations.Annotations(rt.Annotations)
-	require.False(t, annos.Contains(&v2.SkipGrants{}))
+	require.True(t, annos.Contains(&v2.SkipEntitlements{}))
+	require.False(t, annos.Contains(&v2.SkipEntitlementsAndGrants{}))
 
 	filtered := &userBuilder{syncLicenses: false}
 	rt = filtered.ResourceType(context.Background())
 	annos = annotations.Annotations(rt.Annotations)
-	require.True(t, annos.Contains(&v2.SkipGrants{}))
+	require.True(t, annos.Contains(&v2.SkipEntitlementsAndGrants{}))
+
+	// The package-level var must be untouched by either call.
+	pkgAnnos := annotations.Annotations(userResourceType.Annotations)
+	require.False(t, pkgAnnos.Contains(&v2.SkipEntitlements{}))
+	require.False(t, pkgAnnos.Contains(&v2.SkipEntitlementsAndGrants{}))
 }

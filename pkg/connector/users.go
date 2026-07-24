@@ -19,10 +19,11 @@ import (
 type userBuilder struct {
 	*dropbox.Client
 	// syncLicenses reports whether the "license" resource type is included in
-	// the customer's sync filter. userBuilder.Grants emits license grants as a
-	// cross-type optimization (see Grants below); when license isn't being
-	// synced, emitting those grants is wasted work and can produce grants
-	// referencing a resource type the sync doesn't otherwise touch.
+	// the customer's sync filter. Grants emits license grants as a cross-type
+	// optimization (see Grants below); when license isn't being synced those
+	// grants would reference a resource type the sync doesn't otherwise touch,
+	// so ResourceType annotates this type to tell the SDK to skip calling
+	// Grants at all in that case.
 	syncLicenses bool
 }
 
@@ -71,17 +72,19 @@ func userResource(user dropbox.Profile, parentResourceID *v2.ResourceId) (*v2.Re
 	)
 }
 
+// ResourceType returns userResourceType annotated to match what Grants
+// (below) will actually do. User never has entitlements of its own
+// (Entitlements always returns nil), so entitlements are always skipped. When
+// license isn't in the sync filter, Grants also never emits anything (its
+// only output is the cross-type license grant), so grants are skipped too.
 func (o *userBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
-	if o.syncLicenses {
-		return userResourceType
-	}
-
-	// License sync is filtered out, so Grants (below) never emits anything for
-	// this type; tell the SDK to skip calling it at all rather than paying for
-	// an empty ListGrants per user.
 	rt := proto.Clone(userResourceType).(*v2.ResourceType)
 	annos := annotations.Annotations(rt.Annotations)
-	annos.Append(&v2.SkipGrants{})
+	if o.syncLicenses {
+		annos.Append(&v2.SkipEntitlements{})
+	} else {
+		annos.Append(&v2.SkipEntitlementsAndGrants{})
+	}
 	rt.Annotations = annos
 	return rt
 }
@@ -145,10 +148,6 @@ func (o *userBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ r
 // a grant. "limited" members, invited members (not yet joined), and removed
 // members (departed, only present because include_removed=true) produce none.
 func (o *userBuilder) Grants(ctx context.Context, resource *v2.Resource, _ resourceSdk.SyncOpAttrs) ([]*v2.Grant, *resourceSdk.SyncOpResults, error) {
-	if !o.syncLicenses {
-		return nil, nil, nil
-	}
-
 	var membershipType, status string
 	if profile := resource.GetProfile(); profile != nil {
 		profileMap := profile.AsMap()
