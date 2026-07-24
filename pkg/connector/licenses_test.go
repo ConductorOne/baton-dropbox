@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/conductorone/baton-dropbox/pkg/connector/dropbox"
+	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
+	"github.com/conductorone/baton-sdk/pkg/annotations"
 	resourceSdk "github.com/conductorone/baton-sdk/pkg/types/resource"
 	"github.com/stretchr/testify/require"
 )
@@ -30,7 +32,7 @@ func TestUserBuilder_Grants_FullMembershipGrantsLicense(t *testing.T) {
 	}, nil)
 	require.NoError(t, err)
 
-	o := &userBuilder{}
+	o := &userBuilder{syncLicenses: true}
 	grants, _, err := o.Grants(context.Background(), res, resourceSdk.SyncOpAttrs{})
 	require.NoError(t, err)
 	require.Len(t, grants, 1)
@@ -50,7 +52,7 @@ func TestUserBuilder_Grants_LimitedMembershipNoLicense(t *testing.T) {
 	}, nil)
 	require.NoError(t, err)
 
-	o := &userBuilder{}
+	o := &userBuilder{syncLicenses: true}
 	grants, _, err := o.Grants(context.Background(), res, resourceSdk.SyncOpAttrs{})
 	require.NoError(t, err)
 	require.Empty(t, grants)
@@ -75,7 +77,7 @@ func TestUserBuilder_Grants_SeatStatusMatrix(t *testing.T) {
 		{"suspended", "limited", false},
 	}
 
-	o := &userBuilder{}
+	o := &userBuilder{syncLicenses: true}
 	for _, tc := range cases {
 		t.Run(tc.status+"_"+tc.membershipType, func(t *testing.T) {
 			res, err := userResource(dropbox.Profile{
@@ -97,4 +99,42 @@ func TestUserBuilder_Grants_SeatStatusMatrix(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestUserBuilder_Grants_LicenseSyncFiltered verifies that userBuilder.Grants
+// -- which emits license grants as a cross-type optimization -- emits nothing
+// when the customer's sync filter excludes the "license" resource type, even
+// for a full member whose status consumes a seat.
+func TestUserBuilder_Grants_LicenseSyncFiltered(t *testing.T) {
+	res, err := userResource(dropbox.Profile{
+		AccountID:      "acc-1",
+		TeamMemberID:   "dbmid:1",
+		Email:          "user@example.com",
+		Status:         dropbox.Tag{Tag: "active"},
+		MembershipType: dropbox.Tag{Tag: "full"},
+	}, nil)
+	require.NoError(t, err)
+
+	o := &userBuilder{syncLicenses: false}
+	grants, _, err := o.Grants(context.Background(), res, resourceSdk.SyncOpAttrs{})
+	require.NoError(t, err)
+	require.Empty(t, grants)
+}
+
+// TestUserBuilder_ResourceType_SkipsGrantsWhenLicenseFiltered verifies that
+// userResourceType carries a SkipGrants annotation when license sync is
+// filtered out, so the SDK skips calling ListGrants for user resources
+// entirely, while the default (license synced) case still exposes the
+// existing capability permission annotations unmodified.
+func TestUserBuilder_ResourceType_SkipsGrantsWhenLicenseFiltered(t *testing.T) {
+	synced := &userBuilder{syncLicenses: true}
+	rt := synced.ResourceType(context.Background())
+	require.Same(t, userResourceType, rt)
+	annos := annotations.Annotations(rt.Annotations)
+	require.False(t, annos.Contains(&v2.SkipGrants{}))
+
+	filtered := &userBuilder{syncLicenses: false}
+	rt = filtered.ResourceType(context.Background())
+	annos = annotations.Annotations(rt.Annotations)
+	require.True(t, annos.Contains(&v2.SkipGrants{}))
 }

@@ -13,10 +13,17 @@ import (
 	resourceSdk "github.com/conductorone/baton-sdk/pkg/types/resource"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/proto"
 )
 
 type userBuilder struct {
 	*dropbox.Client
+	// syncLicenses reports whether the "license" resource type is included in
+	// the customer's sync filter. userBuilder.Grants emits license grants as a
+	// cross-type optimization (see Grants below); when license isn't being
+	// synced, emitting those grants is wasted work and can produce grants
+	// referencing a resource type the sync doesn't otherwise touch.
+	syncLicenses bool
 }
 
 // mapUserStatus converts Dropbox user status to SDK status.
@@ -65,7 +72,18 @@ func userResource(user dropbox.Profile, parentResourceID *v2.ResourceId) (*v2.Re
 }
 
 func (o *userBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
-	return userResourceType
+	if o.syncLicenses {
+		return userResourceType
+	}
+
+	// License sync is filtered out, so Grants (below) never emits anything for
+	// this type; tell the SDK to skip calling it at all rather than paying for
+	// an empty ListGrants per user.
+	rt := proto.Clone(userResourceType).(*v2.ResourceType)
+	annos := annotations.Annotations(rt.Annotations)
+	annos.Append(&v2.SkipGrants{})
+	rt.Annotations = annos
+	return rt
 }
 
 // List returns all the users from the database as resource objects.
@@ -127,6 +145,10 @@ func (o *userBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ r
 // a grant. "limited" members, invited members (not yet joined), and removed
 // members (departed, only present because include_removed=true) produce none.
 func (o *userBuilder) Grants(ctx context.Context, resource *v2.Resource, _ resourceSdk.SyncOpAttrs) ([]*v2.Grant, *resourceSdk.SyncOpResults, error) {
+	if !o.syncLicenses {
+		return nil, nil, nil
+	}
+
 	var membershipType, status string
 	if profile := resource.GetProfile(); profile != nil {
 		profileMap := profile.AsMap()
@@ -152,9 +174,10 @@ func (o *userBuilder) Grants(ctx context.Context, resource *v2.Resource, _ resou
 	}, nil, nil
 }
 
-func newUserBuilder(client *dropbox.Client) *userBuilder {
+func newUserBuilder(client *dropbox.Client, syncLicenses bool) *userBuilder {
 	return &userBuilder{
-		Client: client,
+		Client:       client,
+		syncLicenses: syncLicenses,
 	}
 }
 
