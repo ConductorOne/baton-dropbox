@@ -13,10 +13,18 @@ import (
 	resourceSdk "github.com/conductorone/baton-sdk/pkg/types/resource"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/proto"
 )
 
 type userBuilder struct {
 	*dropbox.Client
+	// syncLicenses reports whether the "license" resource type is included in
+	// the customer's sync filter. Grants emits license grants as a cross-type
+	// optimization (see Grants below); when license isn't being synced those
+	// grants would reference a resource type the sync doesn't otherwise touch,
+	// so ResourceType annotates this type to tell the SDK to skip calling
+	// Grants at all in that case.
+	syncLicenses bool
 }
 
 // mapUserStatus converts Dropbox user status to SDK status.
@@ -64,8 +72,21 @@ func userResource(user dropbox.Profile, parentResourceID *v2.ResourceId) (*v2.Re
 	)
 }
 
+// ResourceType returns userResourceType annotated to match what Grants
+// (below) will actually do. User never has entitlements of its own
+// (Entitlements always returns nil), so entitlements are always skipped. When
+// license isn't in the sync filter, Grants also never emits anything (its
+// only output is the cross-type license grant), so grants are skipped too.
 func (o *userBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
-	return userResourceType
+	rt := proto.Clone(userResourceType).(*v2.ResourceType)
+	annos := annotations.Annotations(rt.Annotations)
+	if o.syncLicenses {
+		annos.Append(&v2.SkipEntitlements{})
+	} else {
+		annos.Append(&v2.SkipEntitlementsAndGrants{})
+	}
+	rt.Annotations = annos
+	return rt
 }
 
 // List returns all the users from the database as resource objects.
@@ -152,9 +173,10 @@ func (o *userBuilder) Grants(ctx context.Context, resource *v2.Resource, _ resou
 	}, nil, nil
 }
 
-func newUserBuilder(client *dropbox.Client) *userBuilder {
+func newUserBuilder(client *dropbox.Client, syncLicenses bool) *userBuilder {
 	return &userBuilder{
-		Client: client,
+		Client:       client,
+		syncLicenses: syncLicenses,
 	}
 }
 

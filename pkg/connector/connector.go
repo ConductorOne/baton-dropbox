@@ -25,6 +25,7 @@ var _ connectorbuilder.EventFeedsLimited = (*Connector)(nil)
 type Connector struct {
 	client            *dropbox.Client
 	syncUserLastLogin bool
+	syncLicenses      bool
 }
 
 // Option is a function that configures a Connector.
@@ -62,6 +63,17 @@ func WithRefreshToken(ctx context.Context, appKey, appSecret, refreshToken, base
 func WithSyncUserLastLogin(enabled bool) Option {
 	return func(c *Connector) error {
 		c.syncUserLastLogin = enabled
+		return nil
+	}
+}
+
+// WithSyncLicenses reports whether the "license" resource type is included in
+// the customer's sync filter. userBuilder.Grants emits license grants as a
+// cross-type optimization and must skip that work when license is filtered
+// out (see users.go).
+func WithSyncLicenses(enabled bool) Option {
+	return func(c *Connector) error {
+		c.syncLicenses = enabled
 		return nil
 	}
 }
@@ -117,7 +129,12 @@ func NewLambdaConnector(ctx context.Context, dropboxCfg *cfg.Dropbox, cliOpts *c
 		)
 	}
 
-	cb, err := New(ctx, opts, WithSyncUserLastLogin(dropboxCfg.SyncUserLastLogin))
+	syncLicenses := true
+	if cliOpts != nil {
+		syncLicenses = cliOpts.WillSyncResourceType(licenseResourceType.Id)
+	}
+
+	cb, err := New(ctx, opts, WithSyncUserLastLogin(dropboxCfg.SyncUserLastLogin), WithSyncLicenses(syncLicenses))
 	if err != nil {
 		l.Error("error creating connector", zap.Error(err))
 		return nil, nil, err
@@ -174,7 +191,7 @@ func configure(ctx context.Context, dropboxCfg *cfg.Dropbox) error {
 // ResourceSyncers returns a ResourceSyncer for each resource type that should be synced from the upstream service.
 func (c *Connector) ResourceSyncers(ctx context.Context) []connectorbuilder.ResourceSyncerV2 {
 	return []connectorbuilder.ResourceSyncerV2{
-		newUserBuilder(c.client),
+		newUserBuilder(c.client, c.syncLicenses),
 		newRoleBuilder(c.client),
 		newGroupBuilder(c.client),
 		newLicenseBuilder(),
