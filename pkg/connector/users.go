@@ -28,18 +28,18 @@ type userBuilder struct {
 }
 
 // mapUserStatus converts Dropbox user status to SDK status.
-func mapUserStatus(status dropbox.Tag) v2.UserTrait_Status_Status {
+func mapUserStatus(status dropbox.Tag) v2.Status_ResourceStatus {
 	switch status.Tag {
 	case "active":
-		return v2.UserTrait_Status_STATUS_ENABLED
+		return v2.Status_RESOURCE_STATUS_ENABLED
 	case "invited":
-		return v2.UserTrait_Status_STATUS_ENABLED
+		return v2.Status_RESOURCE_STATUS_ENABLED
 	case "suspended":
-		return v2.UserTrait_Status_STATUS_DISABLED
+		return v2.Status_RESOURCE_STATUS_DISABLED
 	case "removed":
-		return v2.UserTrait_Status_STATUS_DELETED
+		return v2.Status_RESOURCE_STATUS_DELETED
 	default:
-		return v2.UserTrait_Status_STATUS_UNSPECIFIED
+		return v2.Status_RESOURCE_STATUS_UNSPECIFIED
 	}
 }
 
@@ -66,7 +66,7 @@ func userResource(user dropbox.Profile, parentResourceID *v2.ResourceId) (*v2.Re
 		userResourceType,
 		user.TeamMemberID,
 		userTraitOptions,
-		resourceSdk.WithResourceStatus(v2.Status_ResourceStatus(userStatus), user.Status.Tag),
+		resourceSdk.WithResourceStatus(userStatus, user.Status.Tag),
 		resourceSdk.WithResourceProfile(profile),
 		resourceSdk.WithParentResourceID(parentResourceID),
 	)
