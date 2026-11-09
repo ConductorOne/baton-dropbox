@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/conductorone/baton-dropbox/pkg/connector/dropbox"
+	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
@@ -151,6 +152,8 @@ func TestLoginEventFeed_ListEvents_FiltersToSuccessfulUserLogins(t *testing.T) {
 	require.Equal(t, "dbmid:3", adminActorEvent.ActorResource.Id.Resource)
 	require.Equal(t, userResourceType.Id, adminActorEvent.ActorResource.Id.ResourceType)
 	require.Equal(t, "Carol", adminActorEvent.ActorResource.DisplayName)
+	require.Equal(t, v2.UsageEvent_TARGET_KIND_APP_ACCESS, usageEvent.TargetKind)
+	require.Equal(t, v2.UsageEvent_TARGET_KIND_APP_ACCESS, adminActorEvent.TargetKind)
 	require.Equal(t, dropboxAppResourceID, usageEvent.TargetResource.Id.Resource)
 	require.Equal(t, appResourceType.Id, usageEvent.TargetResource.Id.ResourceType)
 	require.Equal(t, timestamppb.New(mustParseDropboxTime(t, "2024-01-01T10:00:00Z")).AsTime(), events[0].OccurredAt.AsTime())

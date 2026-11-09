@@ -177,6 +177,7 @@ func (f *loginEventFeed) ListEvents(
 			OccurredAt: timestamppb.New(occurredAt),
 			Event: &v2.Event_UsageEvent{
 				UsageEvent: &v2.UsageEvent{
+					TargetKind: v2.UsageEvent_TARGET_KIND_APP_ACCESS,
 					TargetResource: &v2.Resource{
 						Id: &v2.ResourceId{
 							ResourceType: appResourceType.Id,
