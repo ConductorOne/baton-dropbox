@@ -1,4 +1,4 @@
-![Baton Logo](./docs/images/baton-logo.png)
+![Baton Logo](./baton-logo.png)
 
 # `baton-dropbox` [![Go Reference](https://pkg.go.dev/badge/github.com/conductorone/baton-dropbox.svg)](https://pkg.go.dev/github.com/conductorone/baton-dropbox) ![ci](https://github.com/conductorone/baton-dropbox/actions/workflows/ci.yaml/badge.svg) ![verify](https://github.com/conductorone/baton-dropbox/actions/workflows/verify.yaml/badge.svg)
 
